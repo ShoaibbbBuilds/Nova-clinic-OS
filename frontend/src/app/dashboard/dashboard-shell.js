@@ -1,10 +1,13 @@
 
 "use client";
+
+import AppointmentsPanel from "./appointments-panel";
 import DoctorsPanel from "./doctors-panel";
+import PatientsPanel from "./patients-panel";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import PatientsPanel from "./patients-panel";
+
 const navigation = [
   { name: "Overview", symbol: "⌂" },
   { name: "Patients", symbol: "♙" },
@@ -79,7 +82,6 @@ export default function DashboardShell({
 
   return (
     <div className="min-h-screen bg-[#F0F7FF] text-[#16345C]">
-
       {sidebarOpen && (
         <button
           aria-label="Close navigation"
@@ -90,10 +92,9 @@ export default function DashboardShell({
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[255px] flex-col border-r border-[#E0EBF8] bg-white transition-transform duration-300 ${sidebarOpen
-            ? "translate-x-0"
-            : "-translate-x-full"
-          } lg:translate-x-0`}
+        className={`fixed inset-y-0 left-0 z-50 flex w-[255px] flex-col border-r border-[#E0EBF8] bg-white transition-transform duration-300 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        } lg:translate-x-0`}
       >
         <div className="flex h-[82px] items-center gap-3 border-b border-[#EAF0F8] px-6">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-xl font-bold text-white">
@@ -127,27 +128,34 @@ export default function DashboardShell({
                     setActivePage(item.name);
                     setSidebarOpen(false);
                   }}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition ${active
+                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition ${
+                    active
                       ? "bg-blue-50 text-blue-700"
                       : "text-[#7187A2] hover:bg-[#F4F8FD] hover:text-[#16345C]"
-                    }`}
+                  }`}
                 >
                   <span
-                    className={`flex h-8 w-8 items-center justify-center rounded-lg text-lg ${active
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg text-lg ${
+                      active
                         ? "bg-blue-100 text-blue-700"
                         : "bg-[#F3F7FC] text-[#7187A2]"
-                      }`}
+                    }`}
                   >
                     {item.symbol}
                   </span>
 
                   {item.name}
 
-                  {!["Overview", "Patients", "Doctors"].includes(item.name) && (
-                      <span className="ml-auto text-[10px] text-[#A5B5C8]">
-                        SOON
-                      </span>
-                    )}
+                  {![
+                    "Overview",
+                    "Patients",
+                    "Doctors",
+                    "Appointments",
+                  ].includes(item.name) && (
+                    <span className="ml-auto text-[10px] text-[#A5B5C8]">
+                      SOON
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -160,9 +168,7 @@ export default function DashboardShell({
               ✦
             </div>
 
-            <p className="text-sm font-semibold">
-              Need assistance?
-            </p>
+            <p className="text-sm font-semibold">Need assistance?</p>
 
             <p className="mt-1 text-xs leading-5 text-[#7890AC]">
               Your clinic workspace is ready to grow.
@@ -181,10 +187,8 @@ export default function DashboardShell({
 
       {/* Main content */}
       <main className="min-h-screen lg:ml-[255px]">
-
         {/* Top navigation */}
         <header className="sticky top-0 z-30 flex h-[82px] items-center justify-between border-b border-[#E0EBF8] bg-white/90 px-5 backdrop-blur-xl sm:px-8">
-
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -195,9 +199,7 @@ export default function DashboardShell({
             </button>
 
             <div>
-              <p className="text-sm font-semibold">
-                {activePage}
-              </p>
+              <p className="text-sm font-semibold">{activePage}</p>
 
               <p className="hidden text-xs text-[#8BA0B8] sm:block">
                 Nova Clinic OS / {activePage}
@@ -206,7 +208,6 @@ export default function DashboardShell({
           </div>
 
           <div className="flex items-center gap-3 sm:gap-5">
-
             <button
               aria-label="Notifications"
               className="relative rounded-xl bg-[#F2F7FD] px-3 py-2 text-lg text-[#58718F]"
@@ -216,7 +217,6 @@ export default function DashboardShell({
             </button>
 
             <div className="flex items-center gap-3 border-l border-[#E5EDF6] pl-3 sm:pl-5">
-
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#E4EDFF] text-sm font-bold text-blue-700">
                 {fullName?.slice(0, 1).toUpperCase() || "A"}
               </div>
@@ -230,26 +230,21 @@ export default function DashboardShell({
                   {email}
                 </p>
               </div>
-
             </div>
           </div>
         </header>
 
         {/* Page content */}
         <div className="mx-auto max-w-[1500px] p-5 sm:p-8">
-
           {activePage === "Overview" ? (
             <>
-
               {/* Welcome section */}
               <div className="relative mb-10 overflow-hidden rounded-[28px] bg-gradient-to-br from-[#DCEBFF] via-[#EAF4FF] to-[#EAE5FF] p-7 sm:p-10">
-
                 <div className="pointer-events-none absolute -right-12 -top-20 h-64 w-64 rounded-full bg-white/40 blur-3xl" />
 
                 <div className="pointer-events-none absolute -bottom-24 right-1/4 h-48 w-48 rounded-full bg-purple-200/40 blur-3xl" />
 
                 <div className="relative z-10 flex flex-col justify-between gap-8 sm:flex-row sm:items-end">
-
                   <div>
                     <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/60 px-4 py-2 text-xs font-semibold text-blue-800">
                       <span className="h-2 w-2 rounded-full bg-teal-500" />
@@ -286,37 +281,34 @@ export default function DashboardShell({
                       })}
                     </p>
                   </div>
-
                 </div>
               </div>
 
               {/* Statistics */}
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
-
                 {stats.map((stat) => (
                   <div
                     key={stat.title}
                     className="rounded-2xl border border-[#E1ECF8] bg-white p-7 shadow-[0_8px_30px_rgba(40,80,130,0.035)]"
                   >
                     <div className="flex items-center justify-between">
-
                       <p className="text-sm font-medium text-[#7890AC]">
                         {stat.title}
                       </p>
 
                       <span
-                        className={`flex h-10 w-10 items-center justify-center rounded-xl text-lg ${stat.color === "blue"
+                        className={`flex h-10 w-10 items-center justify-center rounded-xl text-lg ${
+                          stat.color === "blue"
                             ? "bg-blue-50 text-blue-600"
                             : stat.color === "teal"
                               ? "bg-teal-50 text-teal-600"
                               : stat.color === "purple"
                                 ? "bg-purple-50 text-purple-600"
                                 : "bg-amber-50 text-amber-600"
-                          }`}
+                        }`}
                       >
                         {stat.symbol}
                       </span>
-
                     </div>
 
                     <h3 className="mt-6 text-3xl font-bold tracking-tight">
@@ -326,63 +318,59 @@ export default function DashboardShell({
                     <p className="mt-2 text-xs text-[#9AAEC4]">
                       {stat.note}
                     </p>
-
                   </div>
                 ))}
-
               </div>
 
-              {/* Appointments placeholder */}
+              {/* Appointment shortcut and workspace */}
               <div className="mt-12 grid grid-cols-1 gap-8 xl:grid-cols-3">
-
                 <section className="rounded-[24px] border border-[#E1ECF8] bg-white p-7 xl:col-span-2">
-
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
                     <div>
-                      <h3 className="text-lg font-bold">
-                        Appointments
+                      <p className="text-sm font-semibold text-teal-600">
+                        CLINIC SCHEDULING
+                      </p>
+
+                      <h3 className="mt-2 text-xl font-bold">
+                        Keep every visit on track.
                       </h3>
 
-                      <p className="mt-2 text-sm text-[#8BA0B8]">
-                        Your clinic's schedule will appear here.
+                      <p className="mt-2 max-w-md text-sm leading-6 text-[#8BA0B8]">
+                        Book appointments, find patient visits and update
+                        appointment statuses from your clinic schedule.
                       </p>
                     </div>
 
-                    <span className="rounded-xl bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700">
-                      Coming soon
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-2xl text-teal-600">
+                      ▦
                     </span>
                   </div>
 
-                  <div className="flex min-h-[180px] flex-col items-center justify-center text-center">
+                  <div className="mt-8 flex flex-wrap items-center gap-3">
+                    <button
+                      onClick={() => setActivePage("Appointments")}
+                      className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+                    >
+                      Manage appointments
+                    </button>
 
-                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-50 text-2xl text-teal-600">
-                      ▦
-                    </div>
-
-                    <p className="mt-4 font-semibold">
-                      Your schedule starts here
-                    </p>
-
-                    <p className="mt-2 max-w-sm text-sm leading-6 text-[#8BA0B8]">
-                      Once appointment management is ready, you'll be able
-                      to manage your daily clinic schedule here.
-                    </p>
-
+                    <button
+                      onClick={() => setActivePage("Doctors")}
+                      className="rounded-xl border border-[#E1ECF8] px-5 py-3 text-sm font-semibold text-[#58718F] transition hover:bg-[#F4F8FD]"
+                    >
+                      View doctors
+                    </button>
                   </div>
                 </section>
 
                 <section className="rounded-[24px] border border-[#E1ECF8] bg-white p-7">
-
-                  <h3 className="text-lg font-bold">
-                    Your workspace
-                  </h3>
+                  <h3 className="text-lg font-bold">Your workspace</h3>
 
                   <p className="mt-2 text-sm text-[#8BA0B8]">
                     Everything your clinic needs, in one place.
                   </p>
 
                   <div className="mt-8 space-y-6">
-
                     <div className="flex items-center gap-4">
                       <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
                         ♙
@@ -430,14 +418,10 @@ export default function DashboardShell({
                         </p>
                       </div>
                     </div>
-
                   </div>
                 </section>
-
               </div>
-
             </>
-
           ) : activePage === "Patients" ? (
             <PatientsPanel
               initialPatients={patients}
@@ -446,6 +430,8 @@ export default function DashboardShell({
             />
           ) : activePage === "Doctors" ? (
             <DoctorsPanel />
+          ) : activePage === "Appointments" ? (
+            <AppointmentsPanel />
           ) : (
             <div className="flex min-h-[420px] flex-col items-center justify-center rounded-[24px] border border-[#E1ECF8] bg-white p-8 text-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-2xl text-blue-600">
@@ -455,7 +441,8 @@ export default function DashboardShell({
               <h2 className="mt-5 text-2xl font-bold">{activePage}</h2>
 
               <p className="mt-2 max-w-sm text-sm leading-6 text-[#7890AC]">
-                This module is coming soon. We'll connect it to your clinic database.
+                This module is coming soon. We'll connect it to your clinic
+                database.
               </p>
 
               <button
@@ -466,7 +453,6 @@ export default function DashboardShell({
               </button>
             </div>
           )}
-
         </div>
       </main>
     </div>
