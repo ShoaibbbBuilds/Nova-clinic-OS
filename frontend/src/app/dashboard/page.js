@@ -19,12 +19,16 @@ export default async function DashboardPage() {
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("full_name, role, clinic_id")
+    .select("full_name, role, clinic_id, is_active")
     .eq("id", data.user.id)
     .single();
 
   if (profileError || !profile) {
     throw new Error("Unable to load clinic profile.");
+  }
+  if (!profile.is_active) {
+    await supabase.auth.signOut();
+    redirect("/login");
   }
 
   const [
@@ -86,7 +90,7 @@ export default async function DashboardPage() {
       patients={patientListResult.data ?? []}
       clinicId={profile.clinic_id}
       userId={data.user.id}
+      role={profile.role}
     />
   );
 }
-    

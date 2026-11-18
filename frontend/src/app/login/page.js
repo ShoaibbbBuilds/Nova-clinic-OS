@@ -10,6 +10,7 @@ export default function LoginPage() {
   const router = useRouter();
 
   const [isSignup, setIsSignup] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [fullName, setFullName] = useState("");
   const [clinicName, setClinicName] = useState("");
   const [email, setEmail] = useState("");
@@ -23,7 +24,15 @@ export default function LoginPage() {
     setMessage("");
 
     try {
-      if (isSignup) {
+      if (isForgotPassword) {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+        });
+
+        if (error) throw error;
+
+        setMessage("If an account exists for this email, a password reset link has been sent. Check your inbox.");
+      } else if (isSignup) {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -70,13 +79,19 @@ export default function LoginPage() {
           </p>
 
           <h1 className="mt-5 text-3xl font-semibold text-gray-900">
-            {isSignup ? "Create your clinic" : "Welcome back"}
+            {isForgotPassword
+              ? "Reset your password"
+              : isSignup
+                ? "Create your clinic"
+                : "Welcome back"}
           </h1>
 
           <p className="mt-2 text-sm text-gray-500">
-            {isSignup
-              ? "Set up your clinic management workspace."
-              : "Sign in to manage your clinic."}
+            {isForgotPassword
+              ? "Enter your email to receive a password reset link."
+              : isSignup
+                ? "Set up your clinic management workspace."
+                : "Sign in to manage your clinic."}
           </p>
         </div>
 
@@ -110,15 +125,32 @@ export default function LoginPage() {
             className="w-full rounded-lg border border-gray-200 px-4 py-3 outline-none focus:border-blue-500"
           />
 
-          <input
-            required
-            type="password"
-            minLength={8}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password (minimum 8 characters)"
-            className="w-full rounded-lg border border-gray-200 px-4 py-3 outline-none focus:border-blue-500"
-          />
+          {!isForgotPassword && (
+            <input
+              required
+              type="password"
+              minLength={8}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password (minimum 8 characters)"
+              className="w-full rounded-lg border border-gray-200 px-4 py-3 outline-none focus:border-blue-500"
+            />
+          )}
+
+          {!isSignup && !isForgotPassword && (
+            <div className="text-right">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsForgotPassword(true);
+                  setMessage("");
+                }}
+                className="text-sm font-medium text-blue-600 hover:underline"
+              >
+                Forgot password?
+              </button>
+            </div>
+          )}
 
           {message && (
             <p className="rounded-lg bg-blue-50 p-3 text-sm text-blue-700">
@@ -133,25 +165,42 @@ export default function LoginPage() {
           >
             {loading
               ? "Please wait..."
-              : isSignup
-                ? "Create clinic account"
-                : "Sign in"}
+              : isForgotPassword
+                ? "Send reset link"
+                : isSignup
+                  ? "Create clinic account"
+                  : "Sign in"}
           </button>
         </form>
 
         <div className="mt-6 text-center text-sm text-gray-500">
-          {isSignup ? "Already have an account?" : "New to Nova Clinic OS?"}
+          {isForgotPassword ? (
+            <button
+              type="button"
+              onClick={() => {
+                setIsForgotPassword(false);
+                setMessage("");
+              }}
+              className="font-semibold text-blue-600 hover:underline"
+            >
+              Back to sign in
+            </button>
+          ) : (
+            <>
+              {isSignup ? "Already have an account?" : "New to Nova Clinic OS?"}
 
-          <button
-            type="button"
-            onClick={() => {
-              setIsSignup(!isSignup);
-              setMessage("");
-            }}
-            className="ml-2 font-semibold text-blue-600 hover:underline"
-          >
-            {isSignup ? "Sign in" : "Create account"}
-          </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSignup(!isSignup);
+                  setMessage("");
+                }}
+                className="ml-2 font-semibold text-blue-600 hover:underline"
+              >
+                {isSignup ? "Sign in" : "Create account"}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </main>

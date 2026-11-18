@@ -1,6 +1,7 @@
 
 "use client";
 
+import StaffPanel from "./staff-panel";
 import AppointmentsPanel from "./appointments-panel";
 import BillingPanel from "./billing-panel";
 import DoctorsPanel from "./doctors-panel";
@@ -10,13 +11,14 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 const navigation = [
-  { name: "Overview", symbol: "⌂" },
-  { name: "Patients", symbol: "♙" },
-  { name: "Appointments", symbol: "▦" },
-  { name: "Doctors", symbol: "✚" },
-  { name: "Billing", symbol: "₹" },
-  { name: "Reports", symbol: "▥" },
-  { name: "Settings", symbol: "⚙" },
+  { name: "Overview", symbol: "⌂", roles: ["admin", "receptionist", "doctor"] },
+  { name: "Patients", symbol: "♙", roles: ["admin", "receptionist", "doctor"] },
+  { name: "Appointments", symbol: "▦", roles: ["admin", "receptionist", "doctor"] },
+  { name: "Doctors", symbol: "✚", roles: ["admin", "receptionist"] },
+  { name: "Billing", symbol: "₹", roles: ["admin", "receptionist"] },
+  { name: "Staff", symbol: "♧", roles: ["admin"] },
+  { name: "Reports", symbol: "▥", roles: ["admin"] },
+  { name: "Settings", symbol: "⚙", roles: ["admin"] },
 ];
 
 export default function DashboardShell({
@@ -27,11 +29,14 @@ export default function DashboardShell({
   patients,
   clinicId,
   userId,
+  role,
 }) {
   const [activePage, setActivePage] = useState("Overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-
+  const navItems = navigation.filter((item) =>
+    item.roles.includes(role)
+  );
   const router = useRouter();
   const supabase = createClient();
 
@@ -118,7 +123,7 @@ export default function DashboardShell({
           </p>
 
           <nav className="space-y-1">
-            {navigation.map((item) => {
+            {navItems.map((item) => {
               const active = activePage === item.name;
 
               return (
@@ -129,14 +134,14 @@ export default function DashboardShell({
                     setSidebarOpen(false);
                   }}
                   className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition ${active
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-[#7187A2] hover:bg-[#F4F8FD] hover:text-[#16345C]"
+                    ? "bg-blue-50 text-blue-700"
+                    : "text-[#7187A2] hover:bg-[#F4F8FD] hover:text-[#16345C]"
                     }`}
                 >
                   <span
                     className={`flex h-8 w-8 items-center justify-center rounded-lg text-lg ${active
-                        ? "bg-blue-100 text-blue-700"
-                        : "bg-[#F3F7FC] text-[#7187A2]"
+                      ? "bg-blue-100 text-blue-700"
+                      : "bg-[#F3F7FC] text-[#7187A2]"
                       }`}
                   >
                     {item.symbol}
@@ -149,7 +154,8 @@ export default function DashboardShell({
                     "Patients",
                     "Doctors",
                     "Appointments",
-                    "Billing"
+                    "Billing",
+                    "Staff"
                   ].includes(item.name) && (
                       <span className="ml-auto text-[10px] text-[#A5B5C8]">
                         SOON
@@ -297,12 +303,12 @@ export default function DashboardShell({
 
                       <span
                         className={`flex h-10 w-10 items-center justify-center rounded-xl text-lg ${stat.color === "blue"
-                            ? "bg-blue-50 text-blue-600"
-                            : stat.color === "teal"
-                              ? "bg-teal-50 text-teal-600"
-                              : stat.color === "purple"
-                                ? "bg-purple-50 text-purple-600"
-                                : "bg-amber-50 text-amber-600"
+                          ? "bg-blue-50 text-blue-600"
+                          : stat.color === "teal"
+                            ? "bg-teal-50 text-teal-600"
+                            : stat.color === "purple"
+                              ? "bg-purple-50 text-purple-600"
+                              : "bg-amber-50 text-amber-600"
                           }`}
                       >
                         {stat.symbol}
@@ -432,7 +438,10 @@ export default function DashboardShell({
             <AppointmentsPanel />
           ) : activePage === "Billing" ? (
             <BillingPanel />
+          ) : activePage === "Staff" && role === "admin" ? (
+            <StaffPanel />
           ) : (
+
             <div className="flex min-h-[420px] flex-col items-center justify-center rounded-[24px] border border-[#E1ECF8] bg-white p-8 text-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-2xl text-blue-600">
                 ✦
