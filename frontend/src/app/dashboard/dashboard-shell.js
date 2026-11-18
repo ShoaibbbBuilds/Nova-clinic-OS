@@ -2,6 +2,7 @@
 "use client";
 
 import AppointmentsPanel from "./appointments-panel";
+import BillingPanel from "./billing-panel";
 import DoctorsPanel from "./doctors-panel";
 import PatientsPanel from "./patients-panel";
 import { useState } from "react";
@@ -92,9 +93,8 @@ export default function DashboardShell({
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[255px] flex-col border-r border-[#E0EBF8] bg-white transition-transform duration-300 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } lg:translate-x-0`}
+        className={`fixed inset-y-0 left-0 z-50 flex w-[255px] flex-col border-r border-[#E0EBF8] bg-white transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          } lg:translate-x-0`}
       >
         <div className="flex h-[82px] items-center gap-3 border-b border-[#EAF0F8] px-6">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-xl font-bold text-white">
@@ -128,18 +128,16 @@ export default function DashboardShell({
                     setActivePage(item.name);
                     setSidebarOpen(false);
                   }}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition ${
-                    active
+                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition ${active
                       ? "bg-blue-50 text-blue-700"
                       : "text-[#7187A2] hover:bg-[#F4F8FD] hover:text-[#16345C]"
-                  }`}
+                    }`}
                 >
                   <span
-                    className={`flex h-8 w-8 items-center justify-center rounded-lg text-lg ${
-                      active
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg text-lg ${active
                         ? "bg-blue-100 text-blue-700"
                         : "bg-[#F3F7FC] text-[#7187A2]"
-                    }`}
+                      }`}
                   >
                     {item.symbol}
                   </span>
@@ -151,11 +149,12 @@ export default function DashboardShell({
                     "Patients",
                     "Doctors",
                     "Appointments",
+                    "Billing"
                   ].includes(item.name) && (
-                    <span className="ml-auto text-[10px] text-[#A5B5C8]">
-                      SOON
-                    </span>
-                  )}
+                      <span className="ml-auto text-[10px] text-[#A5B5C8]">
+                        SOON
+                      </span>
+                    )}
                 </button>
               );
             })}
@@ -297,15 +296,14 @@ export default function DashboardShell({
                       </p>
 
                       <span
-                        className={`flex h-10 w-10 items-center justify-center rounded-xl text-lg ${
-                          stat.color === "blue"
+                        className={`flex h-10 w-10 items-center justify-center rounded-xl text-lg ${stat.color === "blue"
                             ? "bg-blue-50 text-blue-600"
                             : stat.color === "teal"
                               ? "bg-teal-50 text-teal-600"
                               : stat.color === "purple"
                                 ? "bg-purple-50 text-purple-600"
                                 : "bg-amber-50 text-amber-600"
-                        }`}
+                          }`}
                       >
                         {stat.symbol}
                       </span>
@@ -432,6 +430,8 @@ export default function DashboardShell({
             <DoctorsPanel />
           ) : activePage === "Appointments" ? (
             <AppointmentsPanel />
+          ) : activePage === "Billing" ? (
+            <BillingPanel />
           ) : (
             <div className="flex min-h-[420px] flex-col items-center justify-center rounded-[24px] border border-[#E1ECF8] bg-white p-8 text-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-2xl text-blue-600">
@@ -441,7 +441,7 @@ export default function DashboardShell({
               <h2 className="mt-5 text-2xl font-bold">{activePage}</h2>
 
               <p className="mt-2 max-w-sm text-sm leading-6 text-[#7890AC]">
-                This module is coming soon. We'll connect it to your clinic
+                This module is coming soon. We&apos;ll connect it to your clinic
                 database.
               </p>
 
