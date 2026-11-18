@@ -4,6 +4,7 @@
 import StaffPanel from "./staff-panel";
 import AppointmentsPanel from "./appointments-panel";
 import BillingPanel from "./billing-panel";
+import ReportsPanel from "./reports-panel";
 import DoctorsPanel from "./doctors-panel";
 import PatientsPanel from "./patients-panel";
 import { useState } from "react";
@@ -155,7 +156,8 @@ export default function DashboardShell({
                     "Doctors",
                     "Appointments",
                     "Billing",
-                    "Staff"
+                    "Staff",
+                    "Reports"
                   ].includes(item.name) && (
                       <span className="ml-auto text-[10px] text-[#A5B5C8]">
                         SOON
@@ -440,6 +442,8 @@ export default function DashboardShell({
             <BillingPanel />
           ) : activePage === "Staff" && role === "admin" ? (
             <StaffPanel />
+          ) : activePage === "Reports" && role === "admin" ? (
+            <ReportsPanel />
           ) : (
 
             <div className="flex min-h-[420px] flex-col items-center justify-center rounded-[24px] border border-[#E1ECF8] bg-white p-8 text-center">
