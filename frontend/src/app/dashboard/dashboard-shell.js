@@ -1,6 +1,6 @@
 
 "use client";
-
+import SettingsPanel from "./settings-panel";
 import StaffPanel from "./staff-panel";
 import AppointmentsPanel from "./appointments-panel";
 import BillingPanel from "./billing-panel";
@@ -157,7 +157,8 @@ export default function DashboardShell({
                     "Appointments",
                     "Billing",
                     "Staff",
-                    "Reports"
+                    "Reports",
+                    "Settings",
                   ].includes(item.name) && (
                       <span className="ml-auto text-[10px] text-[#A5B5C8]">
                         SOON
@@ -444,6 +445,14 @@ export default function DashboardShell({
             <StaffPanel />
           ) : activePage === "Reports" && role === "admin" ? (
             <ReportsPanel />
+          ) : activePage === "Settings" && role === "admin" ? (
+            <SettingsPanel
+              clinicId={clinicId}
+              userId={userId}
+              fullName={fullName}
+              email={email}
+              clinicName={clinicName}
+            />
           ) : (
 
             <div className="flex min-h-[420px] flex-col items-center justify-center rounded-[24px] border border-[#E1ECF8] bg-white p-8 text-center">
