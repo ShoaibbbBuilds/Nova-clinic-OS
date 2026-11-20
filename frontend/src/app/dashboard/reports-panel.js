@@ -72,7 +72,11 @@ export default function ReportsPanel() {
       .eq("id", authData.user.id)
       .single();
 
-    if (profileError || !profile?.clinic_id || profile.role !== "admin") {
+    if (
+      profileError ||
+      !profile?.clinic_id ||
+      !["admin", "demo"].includes(profile.role)
+    ) {
       setError("You don't have permission to view clinic reports.");
       setLoading(false);
       return;
@@ -200,7 +204,7 @@ export default function ReportsPanel() {
       map.set(
         payment.invoice_id,
         (map.get(payment.invoice_id) || 0) +
-          Number(payment.amount || 0)
+        Number(payment.amount || 0)
       );
       return map;
     }, new Map());
@@ -311,11 +315,10 @@ export default function ReportsPanel() {
             <button
               key={item.value}
               onClick={() => setRange(item.value)}
-              className={`rounded-xl px-4 py-2.5 text-sm font-medium ${
-                range === item.value
+              className={`rounded-xl px-4 py-2.5 text-sm font-medium ${range === item.value
                   ? "bg-blue-600 text-white"
                   : "border border-[#E1ECF8] bg-white text-[#58718F]"
-              }`}
+                }`}
             >
               {item.label}
             </button>

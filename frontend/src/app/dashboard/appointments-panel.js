@@ -7,70 +7,26 @@ import { createClient } from "@/lib/supabase/client";
 const emptyForm = {
   patient_id: "",
   doctor_id: "",
-  date: "",
-  time: "",
+  appointment_at: "",
   reason: "",
 };
 
-const statuses = [
-  "scheduled",
-  "waiting",
-  "completed",
-  "cancelled",
-  "no_show",
-];
-
-const statusLabels = {
-  scheduled: "Scheduled",
-  waiting: "Waiting",
-  completed: "Completed",
-  cancelled: "Cancelled",
-  no_show: "No-show",
-};
-
-const statusStyles = {
-  scheduled: "bg-blue-50 text-blue-700",
-  waiting: "bg-amber-50 text-amber-700",
-  completed: "bg-teal-50 text-teal-700",
-  cancelled: "bg-red-50 text-red-700",
-  no_show: "bg-purple-50 text-purple-700",
-};
-
-function formatDate(value) {
-  return new Date(value).toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function formatTime(value) {
-  return new Date(value).toLocaleTimeString("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-export default function AppointmentsPanel() {
+export default function AppointmentsPanel({ isReadOnly = false }) {
   const supabase = useMemo(() => createClient(), []);
 
   const [appointments, setAppointments] = useState([]);
   const [patients, setPatients] = useState([]);
   const [doctors, setDoctors] = useState([]);
-
-  const [clinicId, setClinicId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
-
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  async function loadAppointments() {
+  async function loadData() {
     setLoading(true);
     setError("");
 
@@ -78,7 +34,7 @@ export default function AppointmentsPanel() {
       await supabase.auth.getUser();
 
     if (authError || !authData.user) {
-      setError("Your session has expired. Please log in again.");
+      setError("Please log in again.");
       setLoading(false);
       return;
     }
@@ -95,49 +51,60 @@ export default function AppointmentsPanel() {
       return;
     }
 
-    setClinicId(profile.clinic_id);
-
-    const [patientsResult, doctorsResult, appointmentsResult] =
+    const [appointmentsResult, patientsResult, doctorsResult] =
       await Promise.all([
         supabase
+          .from("appointments")
+          .select(`
+            id,
+            patient_id,
+            doctor_id,
+            appointment_at,
+            status,
+            reason,
+            patients ( full_name, phone ),
+            doctors ( full_name, specialization )
+          `)
+          .eq("clinic_id", profile.clinic_id)
+          .order("appointment_at", { ascending: false }),
+
+        supabase
           .from("patients")
-          .select("id, patient_code, full_name, phone")
+          .select("id, full_name, phone")
+          .eq("clinic_id", profile.clinic_id)
           .order("full_name"),
 
         supabase
           .from("doctors")
-          .select("id, full_name, specialization, is_active")
+          .select("id, full_name, specialization")
           .eq("clinic_id", profile.clinic_id)
           .eq("is_active", true)
           .order("full_name"),
-
-        supabase
-          .from("appointments")
-          .select("id, clinic_id, patient_id, doctor_id, appointment_at, status, reason")
-          .eq("clinic_id", profile.clinic_id)
-          .order("appointment_at", { ascending: false }),
       ]);
 
-    const queryError =
-      patientsResult.error ||
-      doctorsResult.error ||
-      appointmentsResult.error;
-
-    if (queryError) {
-      setError(queryError.message);
-      setLoading(false);
-      return;
+    if (appointmentsResult.error) {
+      setError(appointmentsResult.error.message);
+    } else {
+      setAppointments(appointmentsResult.data || []);
     }
 
-    setPatients(patientsResult.data || []);
-    setDoctors(doctorsResult.data || []);
-    setAppointments(appointmentsResult.data || []);
+    if (patientsResult.error) {
+      setError(patientsResult.error.message);
+    } else {
+      setPatients(patientsResult.data || []);
+    }
+
+    if (doctorsResult.error) {
+      setError(doctorsResult.error.message);
+    } else {
+      setDoctors(doctorsResult.data || []);
+    }
 
     setLoading(false);
   }
 
   useEffect(() => {
-    loadAppointments();
+    loadData();
   }, []);
 
   function handleChange(event) {
@@ -152,48 +119,17 @@ export default function AppointmentsPanel() {
   async function handleSubmit(event) {
     event.preventDefault();
 
+    if (isReadOnly) return;
+
     setError("");
     setSuccess("");
 
     if (
       !form.patient_id ||
       !form.doctor_id ||
-      !form.date ||
-      !form.time
+      !form.appointment_at
     ) {
-      setError("Please complete all required appointment details.");
-      return;
-    }
-
-    if (!clinicId) {
-      setError("Clinic information is unavailable. Refresh and try again.");
-      return;
-    }
-
-    const selectedDoctor = doctors.find(
-      (doctor) => doctor.id === form.doctor_id
-    );
-
-    if (!selectedDoctor) {
-      setError("Please select an active doctor.");
-      return;
-    }
-
-    const selectedPatient = patients.find(
-      (patient) => patient.id === form.patient_id
-    );
-
-    if (!selectedPatient) {
-      setError("Please select a valid patient.");
-      return;
-    }
-
-    const appointmentDate = new Date(
-      `${form.date}T${form.time}`
-    );
-
-    if (Number.isNaN(appointmentDate.getTime())) {
-      setError("Please enter a valid appointment date and time.");
+      setError("Please complete all required fields.");
       return;
     }
 
@@ -216,11 +152,10 @@ export default function AppointmentsPanel() {
 
     if (
       profileError ||
-      !profile ||
-      profile.clinic_id !== clinicId ||
+      !profile?.clinic_id ||
       !["admin", "receptionist"].includes(profile.role)
     ) {
-      setError("You don't have permission to create appointments.");
+      setError("You don't have permission to book appointments.");
       setSaving(false);
       return;
     }
@@ -231,7 +166,7 @@ export default function AppointmentsPanel() {
         clinic_id: profile.clinic_id,
         patient_id: form.patient_id,
         doctor_id: form.doctor_id,
-        appointment_at: appointmentDate.toISOString(),
+        appointment_at: new Date(form.appointment_at).toISOString(),
         reason: form.reason.trim() || null,
         status: "scheduled",
       });
@@ -242,19 +177,19 @@ export default function AppointmentsPanel() {
       return;
     }
 
+    setSuccess("Appointment booked successfully.");
     setForm(emptyForm);
     setShowForm(false);
-    setSuccess("Appointment created successfully.");
 
-    await loadAppointments();
+    await loadData();
     setSaving(false);
   }
 
   async function updateStatus(appointmentId, newStatus) {
+    if (isReadOnly) return;
+
     setError("");
     setSuccess("");
-
-    if (!clinicId) return;
 
     const { data: authData, error: authError } =
       await supabase.auth.getUser();
@@ -272,8 +207,7 @@ export default function AppointmentsPanel() {
 
     if (
       profileError ||
-      !profile ||
-      profile.clinic_id !== clinicId ||
+      !profile?.clinic_id ||
       !["admin", "receptionist"].includes(profile.role)
     ) {
       setError("You don't have permission to update appointments.");
@@ -284,7 +218,7 @@ export default function AppointmentsPanel() {
       .from("appointments")
       .update({ status: newStatus })
       .eq("id", appointmentId)
-      .eq("clinic_id", clinicId);
+      .eq("clinic_id", profile.clinic_id);
 
     if (updateError) {
       setError(updateError.message);
@@ -303,21 +237,12 @@ export default function AppointmentsPanel() {
   }
 
   const filteredAppointments = appointments.filter((appointment) => {
-    const patient = patients.find(
-      (item) => item.id === appointment.patient_id
-    );
-
-    const doctor = doctors.find(
-      (item) => item.id === appointment.doctor_id
-    );
-
-    const query = search.toLowerCase();
+    const patientName = appointment.patients?.full_name || "";
+    const doctorName = appointment.doctors?.full_name || "";
 
     const matchesSearch =
-      patient?.full_name?.toLowerCase().includes(query) ||
-      patient?.patient_code?.toLowerCase().includes(query) ||
-      patient?.phone?.toLowerCase().includes(query) ||
-      doctor?.full_name?.toLowerCase().includes(query);
+      patientName.toLowerCase().includes(search.toLowerCase()) ||
+      doctorName.toLowerCase().includes(search.toLowerCase());
 
     const matchesStatus =
       statusFilter === "all" || appointment.status === statusFilter;
@@ -325,17 +250,36 @@ export default function AppointmentsPanel() {
     return matchesSearch && matchesStatus;
   });
 
-  const scheduledCount = appointments.filter(
-    (item) => item.status === "scheduled"
-  ).length;
+  function formatDate(value) {
+    if (!value) return "—";
 
-  const completedCount = appointments.filter(
-    (item) => item.status === "completed"
-  ).length;
+    return new Date(value).toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  }
 
-  const waitingCount = appointments.filter(
-    (item) => item.status === "waiting"
-  ).length;
+  function formatTime(value) {
+    if (!value) return "—";
+
+    return new Date(value).toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
+  function statusStyle(status) {
+    const styles = {
+      scheduled: "bg-blue-50 text-blue-700",
+      waiting: "bg-teal-50 text-teal-700",
+      no_show: "bg-amber-50 text-amber-700",
+      completed: "bg-green-50 text-green-700",
+      cancelled: "bg-red-50 text-red-700",
+    };
+
+    return styles[status] || "bg-slate-100 text-slate-600";
+  }
 
   return (
     <div className="space-y-7">
@@ -343,7 +287,7 @@ export default function AppointmentsPanel() {
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <p className="text-sm font-medium text-blue-600">
-            Clinic scheduling
+            Clinic management
           </p>
 
           <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-900">
@@ -351,22 +295,25 @@ export default function AppointmentsPanel() {
           </h1>
 
           <p className="mt-2 text-sm text-slate-500">
-            Schedule and manage your clinic visits.
+            {isReadOnly
+              ? "Explore the clinic's appointment schedule."
+              : "Manage patient appointments and scheduling."}
           </p>
         </div>
 
-        <button
-          onClick={() => {
-            setError("");
-            setSuccess("");
-            setForm(emptyForm);
-            setShowForm(true);
-          }}
-          disabled={patients.length === 0 || doctors.length === 0}
-          className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          + Book appointment
-        </button>
+        {!isReadOnly && (
+          <button
+            onClick={() => {
+              setError("");
+              setSuccess("");
+              setForm(emptyForm);
+              setShowForm(!showForm);
+            }}
+            className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+          >
+            + Book appointment
+          </button>
+        )}
       </div>
 
       {/* Messages */}
@@ -382,67 +329,27 @@ export default function AppointmentsPanel() {
         </div>
       )}
 
-      {/* Missing setup warning */}
-      {!loading && (patients.length === 0 || doctors.length === 0) && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
-          <h3 className="font-semibold text-amber-900">
-            Booking needs a little setup
-          </h3>
-
-          <p className="mt-2 text-sm leading-6 text-amber-800">
-            {patients.length === 0 && doctors.length === 0
-              ? "Register at least one patient and one active doctor before booking."
-              : patients.length === 0
-                ? "Register a patient before booking an appointment."
-                : "Add or activate a doctor before booking an appointment."}
-          </p>
-        </div>
-      )}
-
-      {/* Statistics */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-5">
-          <p className="text-sm text-blue-700">Scheduled</p>
-          <p className="mt-2 text-3xl font-semibold text-slate-900">
-            {scheduledCount}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-amber-100 bg-amber-50/70 p-5">
-          <p className="text-sm text-amber-700">Waiting</p>
-          <p className="mt-2 text-3xl font-semibold text-slate-900">
-            {waitingCount}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-teal-100 bg-teal-50/70 p-5">
-          <p className="text-sm text-teal-700">Completed</p>
-          <p className="mt-2 text-3xl font-semibold text-slate-900">
-            {completedCount}
-          </p>
-        </div>
-      </div>
+      {/* Setup warning */}
+      {!isReadOnly &&
+        !loading &&
+        (patients.length === 0 || doctors.length === 0) && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+            You need at least one patient and one active doctor before booking
+            an appointment.
+          </div>
+        )}
 
       {/* Booking form */}
-      {showForm && (
+      {!isReadOnly && showForm && (
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-slate-900">
-                New appointment
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Select a patient, doctor and appointment time.
-              </p>
-            </div>
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold text-slate-900">
+              Book appointment
+            </h2>
 
-            <button
-              type="button"
-              onClick={() => setShowForm(false)}
-              className="rounded-lg px-3 py-2 text-sm text-slate-500 hover:bg-slate-100"
-            >
-              Close
-            </button>
+            <p className="mt-1 text-sm text-slate-500">
+              Select a patient, doctor and appointment time.
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -457,16 +364,13 @@ export default function AppointmentsPanel() {
                   name="patient_id"
                   value={form.patient_id}
                   onChange={handleChange}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500"
                 >
                   <option value="">Select patient</option>
 
                   {patients.map((patient) => (
                     <option key={patient.id} value={patient.id}>
                       {patient.full_name}
-                      {patient.patient_code
-                        ? ` — ${patient.patient_code}`
-                        : ""}
                     </option>
                   ))}
                 </select>
@@ -482,7 +386,7 @@ export default function AppointmentsPanel() {
                   name="doctor_id"
                   value={form.doctor_id}
                   onChange={handleChange}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500"
                 >
                   <option value="">Select doctor</option>
 
@@ -499,46 +403,30 @@ export default function AppointmentsPanel() {
 
               <div>
                 <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Appointment date *
+                  Date and time *
                 </label>
 
                 <input
                   required
-                  type="date"
-                  name="date"
-                  value={form.date}
+                  type="datetime-local"
+                  name="appointment_at"
+                  value={form.appointment_at}
                   onChange={handleChange}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500"
                 />
               </div>
 
               <div>
                 <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Appointment time *
-                </label>
-
-                <input
-                  required
-                  type="time"
-                  name="time"
-                  value={form.time}
-                  onChange={handleChange}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="mb-2 block text-sm font-medium text-slate-700">
                   Reason for visit
                 </label>
 
-                <textarea
+                <input
                   name="reason"
                   value={form.reason}
                   onChange={handleChange}
-                  rows={3}
-                  placeholder="Briefly describe the reason for the appointment..."
-                  className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  placeholder="Optional reason"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500"
                 />
               </div>
             </div>
@@ -546,7 +434,7 @@ export default function AppointmentsPanel() {
             <div className="flex flex-wrap gap-3 border-t border-slate-100 pt-5">
               <button
                 type="submit"
-                disabled={saving}
+                disabled={saving || patients.length === 0 || doctors.length === 0}
                 className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
               >
                 {saving ? "Booking..." : "Confirm appointment"}
@@ -588,15 +476,14 @@ export default function AppointmentsPanel() {
             <select
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
-              className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500"
+              className="rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500"
             >
               <option value="all">All statuses</option>
-
-              {statuses.map((status) => (
-                <option key={status} value={status}>
-                  {statusLabels[status]}
-                </option>
-              ))}
+              <option value="scheduled">Scheduled</option>
+              <option value="waiting">Waiting</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+              <option value="no_show">No-show</option>
             </select>
           </div>
         </div>
@@ -614,86 +501,74 @@ export default function AppointmentsPanel() {
             </h3>
 
             <p className="mt-1 text-sm text-slate-500">
-              Your scheduled appointments will appear here.
+              {isReadOnly
+                ? "There are no appointments to display."
+                : "Appointments will appear here once booked."}
             </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[850px] text-left">
+            <table className="w-full min-w-[750px] text-left">
               <thead>
                 <tr className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
                   <th className="px-3 py-4 font-medium">Patient</th>
                   <th className="px-3 py-4 font-medium">Doctor</th>
                   <th className="px-3 py-4 font-medium">Date & time</th>
-                  <th className="px-3 py-4 font-medium">Reason</th>
                   <th className="px-3 py-4 font-medium">Status</th>
-                  <th className="px-3 py-4 font-medium">Update status</th>
+
+                  {!isReadOnly && (
+                    <th className="px-3 py-4 font-medium">Update status</th>
+                  )}
                 </tr>
               </thead>
 
               <tbody>
-                {filteredAppointments.map((appointment) => {
-                  const patient = patients.find(
-                    (item) => item.id === appointment.patient_id
-                  );
+                {filteredAppointments.map((appointment) => (
+                  <tr
+                    key={appointment.id}
+                    className="border-b border-slate-50 last:border-0 hover:bg-slate-50/70"
+                  >
+                    <td className="px-3 py-4">
+                      <p className="font-medium text-slate-800">
+                        {appointment.patients?.full_name || "Unknown patient"}
+                      </p>
 
-                  const doctor = doctors.find(
-                    (item) => item.id === appointment.doctor_id
-                  );
+                      <p className="mt-1 text-xs text-slate-500">
+                        {appointment.patients?.phone || "—"}
+                      </p>
+                    </td>
 
-                  return (
-                    <tr
-                      key={appointment.id}
-                      className="border-b border-slate-50 last:border-0 hover:bg-slate-50/70"
-                    >
-                      <td className="px-3 py-4">
-                        <p className="font-medium text-slate-800">
-                          {patient?.full_name || "Patient unavailable"}
-                        </p>
+                    <td className="px-3 py-4">
+                      <p className="font-medium text-slate-800">
+                        {appointment.doctors?.full_name || "Unknown doctor"}
+                      </p>
 
-                        <p className="mt-1 text-xs text-slate-500">
-                          {patient?.patient_code || patient?.phone || ""}
-                        </p>
-                      </td>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {appointment.doctors?.specialization || "—"}
+                      </p>
+                    </td>
 
-                      <td className="px-3 py-4">
-                        <p className="text-sm font-medium text-slate-800">
-                          {doctor?.full_name || "Doctor unavailable"}
-                        </p>
+                    <td className="px-3 py-4">
+                      <p className="text-sm font-medium text-slate-700">
+                        {formatDate(appointment.appointment_at)}
+                      </p>
 
-                        <p className="mt-1 text-xs text-slate-500">
-                          {doctor?.specialization || ""}
-                        </p>
-                      </td>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {formatTime(appointment.appointment_at)}
+                      </p>
+                    </td>
 
-                      <td className="px-3 py-4">
-                        <p className="text-sm font-medium text-slate-800">
-                          {formatDate(appointment.appointment_at)}
-                        </p>
+                    <td className="px-3 py-4">
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-medium ${statusStyle(
+                          appointment.status
+                        )}`}
+                      >
+                        {appointment.status}
+                      </span>
+                    </td>
 
-                        <p className="mt-1 text-xs text-slate-500">
-                          {formatTime(appointment.appointment_at)}
-                        </p>
-                      </td>
-
-                      <td className="max-w-[180px] px-3 py-4 text-sm text-slate-600">
-                        <span className="line-clamp-2">
-                          {appointment.reason || "—"}
-                        </span>
-                      </td>
-
-                      <td className="px-3 py-4">
-                        <span
-                          className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium ${
-                            statusStyles[appointment.status] ||
-                            "bg-slate-100 text-slate-700"
-                          }`}
-                        >
-                          {statusLabels[appointment.status] ||
-                            appointment.status}
-                        </span>
-                      </td>
-
+                    {!isReadOnly && (
                       <td className="px-3 py-4">
                         <select
                           value={appointment.status}
@@ -703,18 +578,18 @@ export default function AppointmentsPanel() {
                               event.target.value
                             )
                           }
-                          className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs outline-none focus:border-blue-500"
+                          className="rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-blue-500"
                         >
-                          {statuses.map((status) => (
-                            <option key={status} value={status}>
-                              {statusLabels[status]}
-                            </option>
-                          ))}
+                          <option value="scheduled">Scheduled</option>
+                          <option value="waiting">Waiting</option>
+                          <option value="completed">Completed</option>
+                          <option value="cancelled">Cancelled</option>
+                          <option value="no_show">No-show</option>
                         </select>
                       </td>
-                    </tr>
-                  );
-                })}
+                    )}
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -722,4 +597,4 @@ export default function AppointmentsPanel() {
       </div>
     </div>
   );
-}   
+}

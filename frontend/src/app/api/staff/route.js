@@ -1,48 +1,58 @@
 
-
-
 import { NextResponse } from "next/server";
 import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function errorResponse(message, status) {
+  return NextResponse.json({ error: message }, { status });
+}
+
 function getAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!key) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY is missing.");
+  if (!url || !key) {
+    throw new Error("Supabase server configuration is incomplete.");
   }
 
-  return createSupabaseAdmin(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    key,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    }
-  );
+  return createSupabaseAdmin(url, key, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
 }
 
 async function getAuthorizedAdmin() {
   const supabase = await createClient();
 
-  const { data: { user }, error } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
 
-  if (error || !user) {
-    return { error: "Unauthorized", status: 401 };
+  if (authError || !user) {
+    return { error: "Unauthorized.", status: 401 };
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("id, clinic_id, role, is_active")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
+
+  if (profileError) {
+    return { error: "Unable to verify account permissions.", status: 500 };
+  }
 
   if (
     !profile ||
     profile.role !== "admin" ||
-    profile.is_active !== true
+    profile.is_active !== true ||
+    !profile.clinic_id
   ) {
     return { error: "Admin access required.", status: 403 };
   }
@@ -50,101 +60,169 @@ async function getAuthorizedAdmin() {
   return { user, profile, supabase };
 }
 
+async function getRequestBody(request) {
+  try {
+    const body = await request.json();
+
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      return null;
+    }
+
+    return body;
+  } catch {
+    return null;
+  }
+}
+
+function getSiteUrl() {
+  const value = process.env.NEXT_PUBLIC_SITE_URL;
+
+  if (!value) return null;
+
+  try {
+    const url = new URL(value);
+
+    if (
+      url.protocol !== "https:" &&
+      url.hostname !== "localhost" &&
+      url.hostname !== "127.0.0.1"
+    ) {
+      return null;
+    }
+
+    return url;
+  } catch {
+    return null;
+  }
+}
+
 export async function GET() {
-  const auth = await getAuthorizedAdmin();
+  try {
+    const auth = await getAuthorizedAdmin();
 
-  if (auth.error) {
-    return NextResponse.json(
-      { error: auth.error },
-      { status: auth.status }
+    if (auth.error) {
+      return errorResponse(auth.error, auth.status);
+    }
+
+    const admin = getAdminClient();
+
+    const [profilesResult, doctorsResult] = await Promise.all([
+      auth.supabase
+        .from("profiles")
+        .select("id, full_name, role, is_active, created_at")
+        .eq("clinic_id", auth.profile.clinic_id)
+        .order("created_at", { ascending: false }),
+
+      auth.supabase
+        .from("doctors")
+        .select("id, full_name, email")
+        .eq("clinic_id", auth.profile.clinic_id)
+        .is("profile_id", null)
+        .eq("is_active", true),
+    ]);
+
+    if (profilesResult.error || doctorsResult.error) {
+      return errorResponse("Unable to load staff directory.", 500);
+    }
+
+    // Fetch only this clinic's staff users instead of listing
+    // up to 1,000 Auth users across the entire project.
+    const staff = await Promise.all(
+      profilesResult.data.map(async (profile) => {
+        const { data, error } = await admin.auth.admin.getUserById(
+          profile.id
+        );
+
+        if (error) {
+          throw error;
+        }
+
+        return {
+          ...profile,
+          email: data.user?.email || "",
+        };
+      })
     );
+
+    return NextResponse.json({
+      staff,
+      availableDoctors: doctorsResult.data,
+    });
+  } catch (error) {
+    console.error("Staff GET error:", error);
+    return errorResponse("Unable to load staff directory.", 500);
   }
-
-  const admin = getAdminClient();
-
-  const [
-    profilesResult,
-    usersResult,
-    doctorsResult,
-  ] = await Promise.all([
-    auth.supabase
-      .from("profiles")
-      .select("id, full_name, role, is_active, created_at")
-      .eq("clinic_id", auth.profile.clinic_id)
-      .order("created_at", { ascending: false }),
-
-    admin.auth.admin.listUsers({
-      page: 1,
-      perPage: 1000,
-    }),
-
-    auth.supabase
-      .from("doctors")
-      .select("id, full_name, email")
-      .eq("clinic_id", auth.profile.clinic_id)
-      .is("profile_id", null)
-      .eq("is_active", true),
-  ]);
-
-  if (profilesResult.error || usersResult.error || doctorsResult.error) {
-    return NextResponse.json(
-      { error: "Unable to load staff directory." },
-      { status: 500 }
-    );
-  }
-
-  const emails = new Map(
-    usersResult.data.users.map((user) => [
-      user.id,
-      user.email,
-    ])
-  );
-
-  return NextResponse.json({
-    staff: profilesResult.data.map((profile) => ({
-      ...profile,
-      email: emails.get(profile.id) || "",
-    })),
-    availableDoctors: doctorsResult.data,
-  });
 }
 
 export async function POST(request) {
-  const auth = await getAuthorizedAdmin();
-
-  if (auth.error) {
-    return NextResponse.json(
-      { error: auth.error },
-      { status: auth.status }
-    );
-  }
-
   try {
-    const body = await request.json();
+    const auth = await getAuthorizedAdmin();
+
+    if (auth.error) {
+      return errorResponse(auth.error, auth.status);
+    }
+
+    const body = await getRequestBody(request);
+
+    if (!body) {
+      return errorResponse("Invalid request body.", 400);
+    }
 
     const email = String(body.email || "").trim().toLowerCase();
     const fullName = String(body.fullName || "").trim();
     const role = body.role;
-    const doctorId = body.doctorId || null;
 
-    if (!email || !fullName || !["doctor", "receptionist"].includes(role)) {
-      return NextResponse.json(
-        { error: "Enter a name, valid email and staff role." },
-        { status: 400 }
+    const doctorId =
+      body.doctorId === null ||
+      body.doctorId === undefined ||
+      body.doctorId === ""
+        ? null
+        : body.doctorId;
+
+    const validEmail =
+      email.length <= 254 &&
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+    const validName =
+      fullName.length > 0 &&
+      fullName.length <= 120 &&
+      !/[\u0000-\u001F\u007F]/.test(fullName);
+
+    if (
+      !validEmail ||
+      !validName ||
+      !["doctor", "receptionist"].includes(role)
+    ) {
+      return errorResponse(
+        "Enter a valid name, email and staff role.",
+        400
       );
     }
 
     if (role === "doctor" && !doctorId) {
-      return NextResponse.json(
-        { error: "Select an existing doctor record." },
-        { status: 400 }
-      );
+      return errorResponse("Select an existing doctor record.", 400);
+    }
+
+    if (
+      doctorId !== null &&
+      (typeof doctorId !== "string" || !UUID_REGEX.test(doctorId))
+    ) {
+      return errorResponse("Invalid doctor record.", 400);
     }
 
     if (role === "receptionist" && doctorId) {
-      return NextResponse.json(
-        { error: "Receptionists cannot be linked to doctor records." },
-        { status: 400 }
+      return errorResponse(
+        "Receptionists cannot be linked to doctor records.",
+        400
+      );
+    }
+
+    const siteUrl = getSiteUrl();
+
+    if (!siteUrl) {
+      return errorResponse(
+        "The invitation redirect URL is missing or invalid.",
+        500
       );
     }
 
@@ -160,39 +238,43 @@ export async function POST(request) {
         p_doctor_id: doctorId,
       });
 
-    if (invitationError) {
-      return NextResponse.json(
-        { error: invitationError.message },
-        { status: 400 }
+    if (invitationError || !invitationId) {
+      console.error("Staff invitation creation failed:", invitationError);
+
+      return errorResponse(
+        "Unable to create invitation. Check the email and doctor record.",
+        400
       );
     }
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-
-    if (!siteUrl) {
-      await admin.rpc("cancel_staff_invitation", {
-        p_invitation_id: invitationId,
-      });
-
-      return NextResponse.json(
-        { error: "NEXT_PUBLIC_SITE_URL is missing." },
-        { status: 500 }
-      );
-    }
+    const redirectUrl = new URL("/auth/callback", siteUrl);
+    redirectUrl.searchParams.set("next", "/dashboard");
 
     const { error: inviteError } =
       await admin.auth.admin.inviteUserByEmail(email, {
-        redirectTo: `${siteUrl}/auth/callback?next=/dashboard`,
+        redirectTo: redirectUrl.toString(),
       });
 
     if (inviteError) {
-      await admin.rpc("cancel_staff_invitation", {
-        p_invitation_id: invitationId,
-      });
+      console.error("Staff email invitation failed:", inviteError);
 
-      return NextResponse.json(
-        { error: inviteError.message },
-        { status: 400 }
+      const { error: cancelError } = await admin.rpc(
+        "cancel_staff_invitation",
+        {
+          p_invitation_id: invitationId,
+        }
+      );
+
+      if (cancelError) {
+        console.error(
+          "Failed to cancel staff invitation:",
+          cancelError
+        );
+      }
+
+      return errorResponse(
+        "Unable to send invitation. Check the email address or try again later.",
+        400
       );
     }
 
@@ -201,37 +283,39 @@ export async function POST(request) {
       message: `Invitation sent to ${email}.`,
     });
   } catch (error) {
-    return NextResponse.json(
-      { error: error.message || "Unable to send invitation." },
-      { status: 500 }
-    );
+    console.error("Staff POST error:", error);
+    return errorResponse("Unable to send invitation.", 500);
   }
 }
 
 export async function PATCH(request) {
-  const auth = await getAuthorizedAdmin();
-
-  if (auth.error) {
-    return NextResponse.json(
-      { error: auth.error },
-      { status: auth.status }
-    );
-  }
-
   try {
-    const { userId, isActive } = await request.json();
+    const auth = await getAuthorizedAdmin();
 
-    if (!userId || typeof isActive !== "boolean") {
-      return NextResponse.json(
-        { error: "Invalid account update." },
-        { status: 400 }
-      );
+    if (auth.error) {
+      return errorResponse(auth.error, auth.status);
+    }
+
+    const body = await getRequestBody(request);
+
+    if (!body) {
+      return errorResponse("Invalid request body.", 400);
+    }
+
+    const { userId, isActive } = body;
+
+    if (
+      typeof userId !== "string" ||
+      !UUID_REGEX.test(userId) ||
+      typeof isActive !== "boolean"
+    ) {
+      return errorResponse("Invalid account update.", 400);
     }
 
     if (userId === auth.user.id) {
-      return NextResponse.json(
-        { error: "You cannot deactivate your own account." },
-        { status: 400 }
+      return errorResponse(
+        "You cannot deactivate your own account.",
+        400
       );
     }
 
@@ -242,16 +326,26 @@ export async function PATCH(request) {
       .select("id, role, is_active")
       .eq("id", userId)
       .eq("clinic_id", auth.profile.clinic_id)
-      .single();
+      .maybeSingle();
 
-    if (targetError || !target) {
-      return NextResponse.json(
-        { error: "Staff account not found." },
-        { status: 404 }
-      );
+    if (targetError) {
+      return errorResponse("Unable to verify staff account.", 500);
     }
 
-    if (target.role === "admin" && !isActive && target.is_active) {
+    if (!target) {
+      return errorResponse("Staff account not found.", 404);
+    }
+
+    if (target.is_active === isActive) {
+      return NextResponse.json({
+        success: true,
+        message: isActive
+          ? "Account is already active."
+          : "Account is already inactive.",
+      });
+    }
+
+    if (target.role === "admin" && !isActive) {
       const { count, error: countError } = await auth.supabase
         .from("profiles")
         .select("id", { count: "exact", head: true })
@@ -259,27 +353,23 @@ export async function PATCH(request) {
         .eq("role", "admin")
         .eq("is_active", true);
 
-      if (countError || count <= 1) {
-        return NextResponse.json(
-          { error: "A clinic must retain at least one active admin." },
-          { status: 400 }
+      if (countError) {
+        return errorResponse(
+          "Unable to verify active clinic administrators.",
+          500
+        );
+      }
+
+      if (count === null || count <= 1) {
+        return errorResponse(
+          "A clinic must retain at least one active admin.",
+          400
         );
       }
     }
 
-    const { error: updateError } = await admin
-      .from("profiles")
-      .update({ is_active: isActive })
-      .eq("id", userId)
-      .eq("clinic_id", auth.profile.clinic_id);
-
-    if (updateError) {
-      return NextResponse.json(
-        { error: updateError.message },
-        { status: 500 }
-      );
-    }
-
+    // Update Auth first. If the profile update fails,
+    // attempt to restore the previous Auth ban state.
     const { error: authError } = await admin.auth.admin.updateUserById(
       userId,
       {
@@ -288,25 +378,44 @@ export async function PATCH(request) {
     );
 
     if (authError) {
-      await admin
-        .from("profiles")
-        .update({ is_active: target.is_active })
-        .eq("id", userId);
+      console.error("Staff Auth update failed:", authError);
+      return errorResponse("Unable to update staff account.", 500);
+    }
 
-      return NextResponse.json(
-        { error: authError.message },
-        { status: 500 }
+    const { data: updatedProfile, error: updateError } = await admin
+      .from("profiles")
+      .update({ is_active: isActive })
+      .eq("id", userId)
+      .eq("clinic_id", auth.profile.clinic_id)
+      .select("id")
+      .maybeSingle();
+
+    if (updateError || !updatedProfile) {
+      console.error("Staff profile update failed:", updateError);
+
+      const { error: rollbackError } =
+        await admin.auth.admin.updateUserById(userId, {
+          ban_duration: target.is_active ? "none" : "876000h",
+        });
+
+      if (rollbackError) {
+        console.error("Staff Auth rollback failed:", rollbackError);
+      }
+
+      return errorResponse(
+        "Unable to update staff account. Please verify its status.",
+        500
       );
     }
 
     return NextResponse.json({
       success: true,
-      message: isActive ? "Account activated." : "Account deactivated.",
+      message: isActive
+        ? "Account activated."
+        : "Account deactivated.",
     });
   } catch (error) {
-    return NextResponse.json(
-      { error: error.message || "Unable to update account." },
-      { status: 500 }
-    );
+    console.error("Staff PATCH error:", error);
+    return errorResponse("Unable to update staff account.", 500);
   }
 }

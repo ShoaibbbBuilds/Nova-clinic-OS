@@ -12,13 +12,13 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 const navigation = [
-  { name: "Overview", symbol: "⌂", roles: ["admin", "receptionist", "doctor"] },
-  { name: "Patients", symbol: "♙", roles: ["admin", "receptionist", "doctor"] },
-  { name: "Appointments", symbol: "▦", roles: ["admin", "receptionist", "doctor"] },
-  { name: "Doctors", symbol: "✚", roles: ["admin", "receptionist"] },
-  { name: "Billing", symbol: "₹", roles: ["admin", "receptionist"] },
+  { name: "Overview", symbol: "⌂", roles: ["admin", "receptionist", "doctor", "demo"] },
+  { name: "Patients", symbol: "♙", roles: ["admin", "receptionist", "doctor", "demo"] },
+  { name: "Appointments", symbol: "▦", roles: ["admin", "receptionist", "doctor", "demo"] },
+  { name: "Doctors", symbol: "✚", roles: ["admin", "receptionist", "demo"] },
+  { name: "Billing", symbol: "₹", roles: ["admin", "receptionist", "demo"] },
   { name: "Staff", symbol: "♧", roles: ["admin"] },
-  { name: "Reports", symbol: "▥", roles: ["admin"] },
+  { name: "Reports", symbol: "▥", roles: ["admin", "demo"] },
   { name: "Settings", symbol: "⚙", roles: ["admin"] },
 ];
 
@@ -31,12 +31,18 @@ export default function DashboardShell({
   clinicId,
   userId,
   role,
+  demoPersona
 }) {
   const [activePage, setActivePage] = useState("Overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+
+  const [previewRole, setPreviewRole] = useState(demoPersona || "admin");
+
+  const displayRole = role === "demo" ? previewRole : role;
   const navItems = navigation.filter((item) =>
-    item.roles.includes(role)
+    item.roles.includes(displayRole) &&
+    (role !== "demo" || item.name !== "Staff")
   );
   const router = useRouter();
   const supabase = createClient();
@@ -216,18 +222,35 @@ export default function DashboardShell({
           </div>
 
           <div className="flex items-center gap-3 sm:gap-5">
-            <button
-              aria-label="Notifications"
-              className="relative rounded-xl bg-[#F2F7FD] px-3 py-2 text-lg text-[#58718F]"
-            >
-              ♧
-              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-orange-400 ring-2 ring-white" />
-            </button>
+            {role === "demo" && (
+              <div className="hidden items-center gap-2 rounded-xl border border-[#E0EBF8] bg-[#F7FAFF] p-1 sm:flex">
+                {["admin", "receptionist", "doctor"].map((persona) => (
+                  <button
+                    key={persona}
+                    onClick={() => {
+                      setPreviewRole(persona);
+                      setActivePage("Overview");
+                    }}
+                    className={`rounded-lg px-3 py-2 text-xs font-semibold capitalize transition ${previewRole === persona
+                      ? "bg-white text-blue-700 shadow-sm"
+                      : "text-[#7890AC] hover:text-[#16345C]"
+                      }`}
+                  >
+                    {persona}
+                  </button>
+                ))}
+              </div>
+            )}
 
             <div className="flex items-center gap-3 border-l border-[#E5EDF6] pl-3 sm:pl-5">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#E4EDFF] text-sm font-bold text-blue-700">
                 {fullName?.slice(0, 1).toUpperCase() || "A"}
               </div>
+              {role === "demo" && (
+                <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700">
+                  DEMO MODE · READ ONLY
+                </span>
+              )}
 
               <div className="hidden sm:block">
                 <p className="max-w-[180px] truncate text-sm font-semibold">
@@ -343,8 +366,9 @@ export default function DashboardShell({
                       </h3>
 
                       <p className="mt-2 max-w-md text-sm leading-6 text-[#8BA0B8]">
-                        Book appointments, find patient visits and update
-                        appointment statuses from your clinic schedule.
+                        {role === "demo"
+                          ? "Explore the clinic schedule and view sample patient appointments."
+                          : "Book appointments, find patient visits and update appointment statuses from your clinic schedule."}
                       </p>
                     </div>
 
@@ -358,7 +382,7 @@ export default function DashboardShell({
                       onClick={() => setActivePage("Appointments")}
                       className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
                     >
-                      Manage appointments
+                      {role === "demo" ? "Explore appointments" : "Manage appointments"}
                     </button>
 
                     <button
@@ -434,24 +458,28 @@ export default function DashboardShell({
               initialPatients={patients}
               clinicId={clinicId}
               userId={userId}
+              isReadOnly={role === "demo"}
             />
           ) : activePage === "Doctors" ? (
-            <DoctorsPanel />
+            <DoctorsPanel isReadOnly={role === "demo"} />
           ) : activePage === "Appointments" ? (
-            <AppointmentsPanel />
+            <AppointmentsPanel isReadOnly={role === "demo"} />
           ) : activePage === "Billing" ? (
             <BillingPanel />
           ) : activePage === "Staff" && role === "admin" ? (
             <StaffPanel />
-          ) : activePage === "Reports" && role === "admin" ? (
+          ) : activePage === "Reports" &&
+            (role === "admin" || (role === "demo" && previewRole === "admin")) ? (
             <ReportsPanel />
-          ) : activePage === "Settings" && role === "admin" ? (
+          ) : activePage === "Settings" &&
+            (role === "admin" || (role === "demo" && previewRole === "admin")) ? (
             <SettingsPanel
               clinicId={clinicId}
               userId={userId}
               fullName={fullName}
               email={email}
               clinicName={clinicName}
+              isReadOnly={role === "demo"}
             />
           ) : (
 

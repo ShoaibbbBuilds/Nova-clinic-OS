@@ -12,7 +12,7 @@ const emptyForm = {
   consultation_fee: "",
 };
 
-export default function DoctorsPanel() {
+export default function DoctorsPanel({ isReadOnly = false }) {
   const supabase = useMemo(() => createClient(), []);
 
   const [doctors, setDoctors] = useState([]);
@@ -54,12 +54,12 @@ export default function DoctorsPanel() {
     setClinicId(profile.clinic_id);
 
     const { data, error: doctorsError } = await supabase
-  .from("doctors")
-  .select(
-    "id, clinic_id, profile_id, full_name, specialization, phone, email, consultation_fee, is_active"
-  )
-  .eq("clinic_id", profile.clinic_id)
-  .order("full_name", { ascending: true });
+      .from("doctors")
+      .select(
+        "id, clinic_id, profile_id, full_name, specialization, phone, email, consultation_fee, is_active"
+      )
+      .eq("clinic_id", profile.clinic_id)
+      .order("full_name", { ascending: true });
 
     if (doctorsError) {
       setError(doctorsError.message);
@@ -75,6 +75,8 @@ export default function DoctorsPanel() {
   }, []);
 
   function openAddForm() {
+    if (isReadOnly) return;
+
     setEditingId(null);
     setForm(emptyForm);
     setError("");
@@ -83,6 +85,8 @@ export default function DoctorsPanel() {
   }
 
   function openEditForm(doctor) {
+    if (isReadOnly) return;
+
     setEditingId(doctor.id);
     setForm({
       full_name: doctor.full_name || "",
@@ -107,6 +111,8 @@ export default function DoctorsPanel() {
 
   async function handleSubmit(event) {
     event.preventDefault();
+
+    if (isReadOnly) return;
 
     if (!form.full_name.trim()) {
       setError("Doctor name is required.");
@@ -187,7 +193,12 @@ export default function DoctorsPanel() {
       return;
     }
 
-    setSuccess(editingId ? "Doctor updated successfully." : "Doctor added successfully.");
+    setSuccess(
+      editingId
+        ? "Doctor updated successfully."
+        : "Doctor added successfully."
+    );
+
     setShowForm(false);
     setEditingId(null);
     setForm(emptyForm);
@@ -197,6 +208,8 @@ export default function DoctorsPanel() {
   }
 
   async function toggleStatus(doctor) {
+    if (isReadOnly) return;
+
     setError("");
     setSuccess("");
 
@@ -241,6 +254,8 @@ export default function DoctorsPanel() {
   }
 
   async function deleteDoctor(doctor) {
+    if (isReadOnly) return;
+
     const confirmed = window.confirm(
       `Delete Dr. ${doctor.full_name}? This action cannot be undone.`
     );
@@ -309,20 +324,26 @@ export default function DoctorsPanel() {
           <p className="text-sm font-medium text-blue-600">
             Clinic management
           </p>
+
           <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-900">
             Doctors
           </h1>
+
           <p className="mt-2 text-sm text-slate-500">
-            Manage your clinic's doctors and their professional details.
+            {isReadOnly
+              ? "Explore the doctors in this clinic."
+              : "Manage your clinic's doctors and their professional details."}
           </p>
         </div>
 
-        <button
-          onClick={openAddForm}
-          className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
-        >
-          + Add doctor
-        </button>
+        {!isReadOnly && (
+          <button
+            onClick={openAddForm}
+            className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+          >
+            + Add doctor
+          </button>
+        )}
       </div>
 
       {/* Messages */}
@@ -356,13 +377,14 @@ export default function DoctorsPanel() {
       </div>
 
       {/* Form */}
-      {showForm && (
+      {!isReadOnly && showForm && (
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
           <div className="mb-6 flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold text-slate-900">
                 {editingId ? "Edit doctor" : "Register a doctor"}
               </h2>
+
               <p className="mt-1 text-sm text-slate-500">
                 Add the doctor's professional information.
               </p>
@@ -383,6 +405,7 @@ export default function DoctorsPanel() {
                 <label className="mb-2 block text-sm font-medium text-slate-700">
                   Full name *
                 </label>
+
                 <input
                   required
                   name="full_name"
@@ -397,6 +420,7 @@ export default function DoctorsPanel() {
                 <label className="mb-2 block text-sm font-medium text-slate-700">
                   Specialization
                 </label>
+
                 <input
                   name="specialization"
                   value={form.specialization}
@@ -410,6 +434,7 @@ export default function DoctorsPanel() {
                 <label className="mb-2 block text-sm font-medium text-slate-700">
                   Phone number
                 </label>
+
                 <input
                   name="phone"
                   value={form.phone}
@@ -423,6 +448,7 @@ export default function DoctorsPanel() {
                 <label className="mb-2 block text-sm font-medium text-slate-700">
                   Email address
                 </label>
+
                 <input
                   type="email"
                   name="email"
@@ -437,6 +463,7 @@ export default function DoctorsPanel() {
                 <label className="mb-2 block text-sm font-medium text-slate-700">
                   Consultation fee (₹)
                 </label>
+
                 <input
                   type="number"
                   min="0"
@@ -482,6 +509,7 @@ export default function DoctorsPanel() {
             <h2 className="text-lg font-semibold text-slate-900">
               Doctor directory
             </h2>
+
             <p className="mt-1 text-sm text-slate-500">
               {filteredDoctors.length} doctors found
             </p>
@@ -502,13 +530,18 @@ export default function DoctorsPanel() {
         ) : filteredDoctors.length === 0 ? (
           <div className="rounded-xl bg-slate-50 px-5 py-12 text-center">
             <div className="text-3xl">🩺</div>
+
             <h3 className="mt-3 font-semibold text-slate-800">
               No doctors found
             </h3>
+
             <p className="mt-1 text-sm text-slate-500">
-              Add your first doctor to get started.
+              {isReadOnly
+                ? "No doctors are currently available."
+                : "Add your first doctor to get started."}
             </p>
-            {!search && (
+
+            {!isReadOnly && !search && (
               <button
                 onClick={openAddForm}
                 className="mt-4 text-sm font-semibold text-blue-600 hover:text-blue-700"
@@ -526,7 +559,12 @@ export default function DoctorsPanel() {
                   <th className="px-3 py-4 font-medium">Contact</th>
                   <th className="px-3 py-4 font-medium">Fee</th>
                   <th className="px-3 py-4 font-medium">Status</th>
-                  <th className="px-3 py-4 text-right font-medium">Actions</th>
+
+                  {!isReadOnly && (
+                    <th className="px-3 py-4 text-right font-medium">
+                      Actions
+                    </th>
+                  )}
                 </tr>
               </thead>
 
@@ -540,6 +578,7 @@ export default function DoctorsPanel() {
                       <p className="font-medium text-slate-800">
                         {doctor.full_name}
                       </p>
+
                       <p className="mt-1 text-xs text-slate-500">
                         {doctor.specialization || "Specialization not added"}
                       </p>
@@ -549,6 +588,7 @@ export default function DoctorsPanel() {
                       <p className="text-sm text-slate-700">
                         {doctor.phone || "—"}
                       </p>
+
                       <p className="mt-1 text-xs text-slate-500">
                         {doctor.email || "—"}
                       </p>
@@ -572,30 +612,32 @@ export default function DoctorsPanel() {
                       </span>
                     </td>
 
-                    <td className="px-3 py-4">
-                      <div className="flex justify-end gap-3 text-sm">
-                        <button
-                          onClick={() => openEditForm(doctor)}
-                          className="font-medium text-blue-600 hover:text-blue-800"
-                        >
-                          Edit
-                        </button>
+                    {!isReadOnly && (
+                      <td className="px-3 py-4">
+                        <div className="flex justify-end gap-3 text-sm">
+                          <button
+                            onClick={() => openEditForm(doctor)}
+                            className="font-medium text-blue-600 hover:text-blue-800"
+                          >
+                            Edit
+                          </button>
 
-                        <button
-                          onClick={() => toggleStatus(doctor)}
-                          className="font-medium text-amber-600 hover:text-amber-800"
-                        >
-                          {doctor.is_active ? "Deactivate" : "Activate"}
-                        </button>
+                          <button
+                            onClick={() => toggleStatus(doctor)}
+                            className="font-medium text-amber-600 hover:text-amber-800"
+                          >
+                            {doctor.is_active ? "Deactivate" : "Activate"}
+                          </button>
 
-                        <button
-                          onClick={() => deleteDoctor(doctor)}
-                          className="font-medium text-red-500 hover:text-red-700"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
+                          <button
+                            onClick={() => deleteDoctor(doctor)}
+                            className="font-medium text-red-500 hover:text-red-700"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

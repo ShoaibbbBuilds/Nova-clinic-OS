@@ -27,6 +27,7 @@ export default function SettingsPanel({
     fullName = "",
     email = "",
     clinicName = "",
+    isReadOnly = false,
 }) {
     const supabase = useMemo(() => createClient(), []);
 
@@ -80,8 +81,14 @@ export default function SettingsPanel({
             .eq("id", userId)
             .single();
 
-        if (profileError || profileData?.role !== "admin") {
-            setError("You don't have permission to manage clinic settings.");
+        if (
+            profileError ||
+            (
+                profileData?.role !== "admin" &&
+                !(isReadOnly && profileData?.role === "demo")
+            )
+        ) {
+            setError("You don't have permission to view clinic settings.");
             setLoading(false);
             return;
         }
@@ -184,6 +191,78 @@ export default function SettingsPanel({
         return (
             <div className="rounded-2xl border border-[#E1ECF8] bg-white p-10 text-center text-sm text-[#7890AC]">
                 Loading clinic settings...
+            </div>
+        );
+    }
+    if (isReadOnly) {
+        return (
+            <div className="space-y-7">
+                <div>
+                    <p className="text-sm font-medium text-blue-600">
+                        Clinic administration · Demo preview
+                    </p>
+                    <h1 className="mt-1 text-3xl font-semibold tracking-tight text-[#16345C]">
+                        Settings
+                    </h1>
+                    <p className="mt-2 text-sm text-[#7890AC]">
+                        Explore the clinic settings interface. Changes are disabled in the public demo.
+                    </p>
+                </div>
+
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                    Read-only preview — clinic details, administrator profile and account security cannot be changed.
+                </div>
+
+                <Section
+                    title="Clinic information"
+                    description="Contact and business details associated with your clinic."
+                >
+                    <div className="space-y-4">
+                        {[
+                            ["Clinic name", clinic.name],
+                            ["Phone number", clinic.phone],
+                            ["Clinic email", clinic.email],
+                            ["Address", clinic.address],
+                            ["Website", clinic.website],
+                        ].map(([label, value]) => (
+                            <div key={label}>
+                                <p className={labelClass}>{label}</p>
+                                <div className="mt-2 rounded-xl border border-[#E1ECF8] bg-[#F4F8FD] px-4 py-3 text-sm text-[#16345C]">
+                                    {value || "Not provided"}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </Section>
+
+                <Section
+                    title="Administrator profile"
+                    description="Account details for the clinic administrator."
+                >
+                    <div className="space-y-4">
+                        <div>
+                            <p className={labelClass}>Display name</p>
+                            <div className="mt-2 rounded-xl border border-[#E1ECF8] bg-[#F4F8FD] px-4 py-3 text-sm text-[#16345C]">
+                                {adminName || "Not provided"}
+                            </div>
+                        </div>
+                        <div>
+                            <p className={labelClass}>Account email</p>
+                            <div className="mt-2 rounded-xl border border-[#E1ECF8] bg-[#F4F8FD] px-4 py-3 text-sm text-[#16345C]">
+                                {authEmail || "Not provided"}
+                            </div>
+                        </div>
+                    </div>
+                </Section>
+
+                <Section
+                    title="Account security"
+                    description="Password management for the administrator account."
+                >
+                    <p className="text-sm text-[#7890AC]">
+                        Password reset is unavailable in the public demo.
+                    </p>
+                </Section>
             </div>
         );
     }

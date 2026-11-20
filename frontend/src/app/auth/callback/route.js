@@ -4,22 +4,27 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request) {
   const { searchParams, origin } = new URL(request.url);
+
   const code = searchParams.get("code");
   const requestedNext = searchParams.get("next") || "/dashboard";
 
-  const next = requestedNext.startsWith("/") &&
-    !requestedNext.startsWith("//")
+  const allowedDestinations = ["/dashboard", "/reset-password"];
+
+  const next = allowedDestinations.includes(requestedNext)
     ? requestedNext
     : "/dashboard";
 
   if (code) {
     const supabase = await createClient();
+
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+      return NextResponse.redirect(new URL(next, origin));
     }
   }
 
-  return NextResponse.redirect(`${origin}/login?error=invite`);
+  return NextResponse.redirect(
+    new URL("/login?error=invite", origin)
+  );
 }

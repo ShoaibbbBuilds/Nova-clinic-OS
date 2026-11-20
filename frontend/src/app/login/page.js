@@ -9,10 +9,7 @@ export default function LoginPage() {
   const supabase = createClient();
   const router = useRouter();
 
-  const [isSignup, setIsSignup] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
-  const [fullName, setFullName] = useState("");
-  const [clinicName, setClinicName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,43 +21,42 @@ export default function LoginPage() {
     setMessage("");
 
     try {
+      if (!email.trim()) {
+        throw new Error("Enter your email address.");
+      }
+
+      if (!isForgotPassword && !password) {
+        throw new Error("Enter your password.");
+      }
+
       if (isForgotPassword) {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
-        });
+        const { error } = await supabase.auth.resetPasswordForEmail(
+          email.trim(),
+          {
+            redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+          }
+        );
 
-        if (error) throw error;
-
-        setMessage("If an account exists for this email, a password reset link has been sent. Check your inbox.");
-      } else if (isSignup) {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              full_name: fullName,
-              clinic_name: clinicName,
-            },
-          },
-        });
-
-        if (error) throw error;
-
-        if (data.session) {
-          router.push("/dashboard");
-          router.refresh();
-        } else {
-          setMessage("Account created. Check your email to confirm your account.");
+        if (error) {
+          throw new Error(
+            "Unable to process your request. Please try again later."
+          );
         }
+
+        setMessage(
+          "If an account exists for this email, a password reset link has been sent."
+        );
       } else {
         const { error } = await supabase.auth.signInWithPassword({
-          email,
+          email: email.trim(),
           password,
         });
 
-        if (error) throw error;
+        if (error) {
+          throw new Error("Invalid email or password.");
+        }
 
-        router.push("/dashboard");
+        router.replace("/dashboard");
         router.refresh();
       }
     } catch (error) {
@@ -79,46 +75,22 @@ export default function LoginPage() {
           </p>
 
           <h1 className="mt-5 text-3xl font-semibold text-gray-900">
-            {isForgotPassword
-              ? "Reset your password"
-              : isSignup
-                ? "Create your clinic"
-                : "Welcome back"}
+            {isForgotPassword ? "Reset your password" : "Welcome back"}
           </h1>
 
           <p className="mt-2 text-sm text-gray-500">
             {isForgotPassword
               ? "Enter your email to receive a password reset link."
-              : isSignup
-                ? "Set up your clinic management workspace."
-                : "Sign in to manage your clinic."}
+              : "Sign in to manage your clinic."}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {isSignup && (
-            <>
-              <input
-                required
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Your full name"
-                className="w-full rounded-lg border border-gray-200 px-4 py-3 outline-none focus:border-blue-500"
-              />
-
-              <input
-                required
-                value={clinicName}
-                onChange={(e) => setClinicName(e.target.value)}
-                placeholder="Clinic name"
-                className="w-full rounded-lg border border-gray-200 px-4 py-3 outline-none focus:border-blue-500"
-              />
-            </>
-          )}
-
           <input
             required
             type="email"
+            maxLength={254}
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Email address"
@@ -129,15 +101,15 @@ export default function LoginPage() {
             <input
               required
               type="password"
-              minLength={8}
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password (minimum 8 characters)"
+              placeholder="Password"
               className="w-full rounded-lg border border-gray-200 px-4 py-3 outline-none focus:border-blue-500"
             />
           )}
 
-          {!isSignup && !isForgotPassword && (
+          {!isForgotPassword && (
             <div className="text-right">
               <button
                 type="button"
@@ -153,7 +125,11 @@ export default function LoginPage() {
           )}
 
           {message && (
-            <p className="rounded-lg bg-blue-50 p-3 text-sm text-blue-700">
+            <p
+              role="status"
+              aria-live="polite"
+              className="rounded-lg bg-blue-50 p-3 text-sm text-blue-700"
+            >
               {message}
             </p>
           )}
@@ -167,9 +143,7 @@ export default function LoginPage() {
               ? "Please wait..."
               : isForgotPassword
                 ? "Send reset link"
-                : isSignup
-                  ? "Create clinic account"
-                  : "Sign in"}
+                : "Sign in"}
           </button>
         </form>
 
@@ -186,20 +160,7 @@ export default function LoginPage() {
               Back to sign in
             </button>
           ) : (
-            <>
-              {isSignup ? "Already have an account?" : "New to Nova Clinic OS?"}
-
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSignup(!isSignup);
-                  setMessage("");
-                }}
-                className="ml-2 font-semibold text-blue-600 hover:underline"
-              >
-                {isSignup ? "Sign in" : "Create account"}
-              </button>
-            </>
+            <p>Need access? Contact your clinic administrator.</p>
           )}
         </div>
       </div>

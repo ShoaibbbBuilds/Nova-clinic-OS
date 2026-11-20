@@ -19,7 +19,7 @@ export default async function DashboardPage() {
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("full_name, role, clinic_id, is_active")
+    .select("full_name, role, clinic_id, is_active, demo_persona")
     .eq("id", data.user.id)
     .single();
 
@@ -91,6 +91,7 @@ export default async function DashboardPage() {
       clinicId={profile.clinic_id}
       userId={data.user.id}
       role={profile.role}
+      demoPersona={profile.demo_persona}
     />
   );
 }

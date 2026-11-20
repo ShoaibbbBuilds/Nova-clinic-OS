@@ -18,7 +18,10 @@ const patientFields =
 
 const PAGE_SIZE = 10;
 
-export default function PatientsPanel({ initialPatients = [] }) {
+export default function PatientsPanel({
+  initialPatients = [],
+  isReadOnly = false,
+}) {
   const [patients, setPatients] = useState(initialPatients);
   const [search, setSearch] = useState("");
   const [genderFilter, setGenderFilter] = useState("all");
@@ -45,7 +48,8 @@ export default function PatientsPanel({ initialPatients = [] }) {
     const now = new Date();
 
     return patients.filter((patient) => {
-      const matchesSearch = !query ||
+      const matchesSearch =
+        !query ||
         [
           patient.full_name,
           patient.patient_code,
@@ -137,6 +141,8 @@ export default function PatientsPanel({ initialPatients = [] }) {
   }
 
   function startEditing() {
+    if (isReadOnly || !selectedPatient) return;
+
     setForm({
       full_name: selectedPatient.full_name || "",
       phone: selectedPatient.phone || "",
@@ -184,6 +190,8 @@ export default function PatientsPanel({ initialPatients = [] }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
+
+    if (isReadOnly) return;
 
     setLoading(true);
     setError("");
@@ -258,7 +266,7 @@ export default function PatientsPanel({ initialPatients = [] }) {
   }
 
   async function handleDeletePatient() {
-    if (!deleteTarget) return;
+    if (isReadOnly || !deleteTarget) return;
 
     setDeleting(true);
     setError("");
@@ -277,7 +285,7 @@ export default function PatientsPanel({ initialPatients = [] }) {
       if (deleteError) {
         throw new Error(
           "Unable to delete this patient. They may have linked records. Details: " +
-          deleteError.message
+            deleteError.message
         );
       }
 
@@ -311,7 +319,7 @@ export default function PatientsPanel({ initialPatients = [] }) {
     });
   }
 
- function renderPatientForm(editing = false) {
+  function renderPatientForm(editing = false) {
     return (
       <section className="mb-8 rounded-[24px] border border-[#DDE9F7] bg-white p-6 sm:p-8">
         <div className="mb-7">
@@ -475,7 +483,7 @@ export default function PatientsPanel({ initialPatients = [] }) {
           </p>
         </div>
 
-        {!selectedPatient && (
+        {!isReadOnly && !selectedPatient && (
           <button
             onClick={() => {
               setShowForm(!showForm);
@@ -497,7 +505,7 @@ export default function PatientsPanel({ initialPatients = [] }) {
       )}
 
       {/* Add patient */}
-      {showForm && !selectedPatient && renderPatientForm()}
+      {!isReadOnly && showForm && !selectedPatient && renderPatientForm()}
 
       {/* Patient details */}
       {selectedPatient && (
@@ -509,7 +517,7 @@ export default function PatientsPanel({ initialPatients = [] }) {
             ← Back to patient directory
           </button>
 
-          {isEditing ? (
+          {isEditing && !isReadOnly ? (
             renderPatientForm(true)
           ) : (
             <section className="rounded-[24px] border border-[#DDE9F7] bg-white p-6 sm:p-8">
@@ -532,24 +540,26 @@ export default function PatientsPanel({ initialPatients = [] }) {
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    onClick={startEditing}
-                    className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700"
-                  >
-                    Edit patient
-                  </button>
+                {!isReadOnly && (
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      onClick={startEditing}
+                      className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700"
+                    >
+                      Edit patient
+                    </button>
 
-                  <button
-                    onClick={() => {
-                      setDeleteTarget(selectedPatient);
-                      setError("");
-                    }}
-                    className="rounded-xl border border-red-200 bg-red-50 px-5 py-3 text-sm font-semibold text-red-600 hover:bg-red-100"
-                  >
-                    Delete patient
-                  </button>
-                </div>
+                    <button
+                      onClick={() => {
+                        setDeleteTarget(selectedPatient);
+                        setError("");
+                      }}
+                      className="rounded-xl border border-red-200 bg-red-50 px-5 py-3 text-sm font-semibold text-red-600 hover:bg-red-100"
+                    >
+                      Delete patient
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -672,7 +682,9 @@ export default function PatientsPanel({ initialPatients = [] }) {
 
               <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-[#8BA0B8]">
                 {patients.length === 0
-                  ? "Your registered patients will appear here. Start by adding your first patient."
+                  ? isReadOnly
+                    ? "There are no patients available in this demo clinic."
+                    : "Your registered patients will appear here. Start by adding your first patient."
                   : "Try changing your search or filters to find a patient."}
               </p>
             </div>
@@ -769,7 +781,7 @@ export default function PatientsPanel({ initialPatients = [] }) {
       )}
 
       {/* Delete confirmation */}
-      {deleteTarget && (
+      {!isReadOnly && deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#102744]/40 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-[24px] border border-[#E1ECF8] bg-white p-7 shadow-2xl">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-xl text-red-600">
@@ -784,8 +796,8 @@ export default function PatientsPanel({ initialPatients = [] }) {
               You are about to permanently delete{" "}
               <span className="font-semibold text-[#16345C]">
                 {deleteTarget.full_name}
-              </span>
-              {" "}from your clinic records. This action cannot be undone.
+              </span>{" "}
+              from your clinic records. This action cannot be undone.
             </p>
 
             {error && (
