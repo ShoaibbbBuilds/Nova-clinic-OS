@@ -1,10 +1,135 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* =========================================
+   NOVA CLINIC OS — DESIGN SYSTEM V1.0
+   ========================================= */
+
+/* LIGHT THEME */
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Backgrounds */
+  --background: #F4F6F8;
+  --surface: #FFFFFF;
+  --surface-subtle: #F8FAFB;
+  --surface-hover: #F1F4F7;
+  --sidebar: #FFFFFF;
+
+  /* Text */
+  --foreground: #202A35;
+  --text-secondary: #788493;
+  --text-muted: #98A2AE;
+
+  /* Borders */
+  --border: #E7EBEF;
+  --border-strong: #D9E0E7;
+
+  /* Brand */
+  --primary: #4779B8;
+  --primary-hover: #32649F;
+  --primary-soft: #EDF3F9;
+  --primary-foreground: #FFFFFF;
+
+  /* Accents */
+  --sage: #648472;
+  --teal: #80AEB1;
+  --lavender: #9186C5;
+  --amber: #D5A45B;
+
+  /* Semantic */
+  --success: #648F76;
+  --success-soft: #EAF3ED;
+  --warning: #B9873F;
+  --warning-soft: #FAF2E4;
+  --danger: #C87575;
+  --danger-soft: #F9ECEC;
+  --info: #4779B8;
+  --info-soft: #EDF3F9;
+
+  /* Components */
+  --card-radius: 14px;
+  --control-radius: 8px;
+  --sidebar-radius: 16px;
+
+  /* Elevation */
+  --shadow-card: 0 2px 8px rgba(32, 42, 53, 0.04);
+  --shadow-floating: 0 8px 24px rgba(32, 42, 53, 0.10);
+  --shadow-modal: 0 16px 48px rgba(32, 42, 53, 0.16);
+
+  /* Charts */
+  --chart-1: #4779B8;
+  --chart-2: #648472;
+  --chart-3: #80AEB1;
+  --chart-4: #9186C5;
+  --chart-5: #D5A45B;
+  --chart-grid: #E7EBEF;
 }
 
+/* DARK THEME */
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Void-black backgrounds */
+  --background: #050505;
+  --surface: #0D0D0D;
+  --surface-subtle: #141414;
+  --surface-hover: #1B1B1B;
+  --sidebar: #090909;
+
+  /* Text */
+  --foreground: #F5F5F5;
+  --text-secondary: #A1A1AA;
+  --text-muted: #737373;
+
+  /* Borders */
+  --border: #242424;
+  --border-strong: #353535;
+
+  /* Brand */
+  --primary: #8BB8F0;
+  --primary-hover: #A6CAFA;
+  --primary-soft: #172334;
+  --primary-foreground: #080808;
+
+  /* Accents */
+  --sage: #8EAA96;
+  --teal: #83B9BA;
+  --lavender: #A99BD5;
+  --amber: #D9B477;
+
+  /* Semantic */
+  --success: #8EBA99;
+  --success-soft: #18251C;
+  --warning: #E0BB7D;
+  --warning-soft: #282014;
+  --danger: #E09292;
+  --danger-soft: #2B1717;
+  --info: #8BB8F0;
+  --info-soft: #172334;
+
+  /* Components */
+  --card-radius: 14px;
+  --control-radius: 8px;
+  --sidebar-radius: 16px;
+
+  /* Elevation */
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.28);
+  --shadow-floating: 0 8px 28px rgba(0, 0, 0, 0.48);
+  --shadow-modal: 0 16px 48px rgba(0, 0, 0, 0.65);
+
+  /* Charts */
+  --chart-1: #8BB8F0;
+  --chart-2: #8EAA96;
+  --chart-3: #83B9BA;
+  --chart-4: #A99BD5;
+  --chart-5: #D9B477;
+  --chart-grid: #242424;
+}
+
+
+/* TAILWIND THEME CONNECTION */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -12,15 +137,62 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* GLOBAL BASE */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
 }
 
 body {
+  min-height: 100%;
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), sans-serif;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+/* FORM ELEMENTS */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* ACCESSIBLE FOCUS */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* SELECTION */
+::selection {
+  background: var(--primary-soft);
+  color: var(--foreground);
+}
+
+/* REDUCED MOTION */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

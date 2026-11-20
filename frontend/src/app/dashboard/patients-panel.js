@@ -18,6 +18,23 @@ const patientFields =
 
 const PAGE_SIZE = 10;
 
+const cardStyle = {
+  background: "var(--surface)",
+  border: "1px solid var(--border)",
+  borderRadius: "var(--card-radius)",
+  boxShadow: "var(--shadow-card)",
+};
+
+const inputStyle = {
+  background: "var(--surface-subtle)",
+  border: "1px solid var(--border-strong)",
+  color: "var(--foreground)",
+  borderRadius: "var(--control-radius)",
+};
+
+const mutedStyle = { color: "var(--text-secondary)" };
+const subtleStyle = { color: "var(--text-muted)" };
+
 export default function PatientsPanel({
   initialPatients = [],
   isReadOnly = false,
@@ -101,7 +118,6 @@ export default function PatientsPanel({
   );
 
   const safePage = Math.min(currentPage, totalPages);
-
   const startIndex = (safePage - 1) * PAGE_SIZE;
   const endIndex = Math.min(
     startIndex + PAGE_SIZE,
@@ -320,89 +336,93 @@ export default function PatientsPanel({
   }
 
   function renderPatientForm(editing = false) {
+    const fields = [
+      {
+        label: "Full name",
+        name: "full_name",
+        placeholder: "Enter full name",
+        required: true,
+      },
+      {
+        label: "Phone number",
+        name: "phone",
+        placeholder: "Enter phone number",
+      },
+      {
+        label: "Email address",
+        name: "email",
+        placeholder: "Enter email address",
+        type: "email",
+      },
+      {
+        label: "Date of birth",
+        name: "date_of_birth",
+        type: "date",
+      },
+    ];
+
     return (
-      <section className="mb-8 rounded-[24px] border border-[#DDE9F7] bg-white p-6 sm:p-8">
+      <section className="mb-8 p-6 sm:p-8" style={cardStyle}>
         <div className="mb-7">
-          <p className="text-xs font-semibold tracking-wider text-blue-600">
+          <p
+            className="text-[11px] font-semibold tracking-[0.14em]"
+            style={{ color: "var(--primary)" }}
+          >
             {editing ? "UPDATE INFORMATION" : "NEW REGISTRATION"}
           </p>
 
-          <h3 className="mt-2 text-xl font-bold text-[#16345C]">
+          <h3 className="mt-2 text-xl font-semibold tracking-tight">
             {editing ? "Edit patient details" : "Add a patient"}
           </h3>
 
-          <p className="mt-1 text-sm text-[#7890AC]">
+          <p className="mt-2 text-sm" style={mutedStyle}>
             {editing
-              ? "Make changes to the patient's information."
+              ? "Update the patient's information below."
               : "Enter the patient's basic information."}
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <div>
-              <label className="mb-2 block text-sm font-medium text-[#45617F]">
-                Full name *
-              </label>
-              <input
-                required
-                name="full_name"
-                value={form.full_name}
-                onChange={updateField}
-                placeholder="Enter full name"
-                className="w-full rounded-xl border border-[#DDE9F7] bg-[#F8FBFF] px-4 py-3 text-sm outline-none focus:border-blue-500"
-              />
-            </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 gap-x-5 gap-y-5 sm:grid-cols-2">
+            {fields.map((field) => (
+              <div key={field.name}>
+                <label
+                  htmlFor={field.name}
+                  className="mb-2 block text-xs font-semibold"
+                >
+                  {field.label}
+                  {field.required ? " *" : ""}
+                </label>
+
+                <input
+                  id={field.name}
+                  required={field.required}
+                  type={field.type || "text"}
+                  name={field.name}
+                  value={form[field.name]}
+                  onChange={updateField}
+                  placeholder={field.placeholder}
+                  className="w-full px-4 py-3 text-sm outline-none transition focus:border-[var(--primary)]"
+                  style={inputStyle}
+                />
+              </div>
+            ))}
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-[#45617F]">
-                Phone number
-              </label>
-              <input
-                name="phone"
-                value={form.phone}
-                onChange={updateField}
-                placeholder="Enter phone number"
-                className="w-full rounded-xl border border-[#DDE9F7] bg-[#F8FBFF] px-4 py-3 text-sm outline-none focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-[#45617F]">
-                Email address
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={form.email}
-                onChange={updateField}
-                placeholder="Enter email address"
-                className="w-full rounded-xl border border-[#DDE9F7] bg-[#F8FBFF] px-4 py-3 text-sm outline-none focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-[#45617F]">
-                Date of birth
-              </label>
-              <input
-                type="date"
-                name="date_of_birth"
-                value={form.date_of_birth}
-                onChange={updateField}
-                className="w-full rounded-xl border border-[#DDE9F7] bg-[#F8FBFF] px-4 py-3 text-sm outline-none focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-[#45617F]">
+              <label
+                htmlFor="gender"
+                className="mb-2 block text-xs font-semibold"
+              >
                 Gender
               </label>
+
               <select
+                id="gender"
                 name="gender"
                 value={form.gender}
                 onChange={updateField}
-                className="w-full rounded-xl border border-[#DDE9F7] bg-[#F8FBFF] px-4 py-3 text-sm outline-none focus:border-blue-500"
+                className="w-full px-4 py-3 text-sm outline-none"
+                style={inputStyle}
               >
                 <option value="">Prefer not to say</option>
                 <option value="male">Male</option>
@@ -413,30 +433,49 @@ export default function PatientsPanel({
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-[#45617F]">
+              <label
+                htmlFor="address"
+                className="mb-2 block text-xs font-semibold"
+              >
                 Address
               </label>
+
               <input
+                id="address"
                 name="address"
                 value={form.address}
                 onChange={updateField}
                 placeholder="Enter address"
-                className="w-full rounded-xl border border-[#DDE9F7] bg-[#F8FBFF] px-4 py-3 text-sm outline-none focus:border-blue-500"
+                className="w-full px-4 py-3 text-sm outline-none"
+                style={inputStyle}
               />
             </div>
           </div>
 
           {error && (
-            <p className="rounded-xl bg-red-50 p-4 text-sm text-red-700">
+            <p
+              className="rounded-xl p-4 text-sm"
+              style={{
+                background: "var(--danger-soft)",
+                color: "var(--danger)",
+              }}
+            >
               {error}
             </p>
           )}
 
-          <div className="flex flex-wrap gap-3 pt-2">
+          <div
+            className="flex flex-wrap gap-3 border-t pt-5"
+            style={{ borderColor: "var(--border)" }}
+          >
             <button
               type="submit"
               disabled={loading}
-              className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+              className="rounded-lg px-6 py-3 text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-50"
+              style={{
+                background: "var(--primary)",
+                color: "var(--primary-foreground)",
+              }}
             >
               {loading
                 ? "Saving..."
@@ -455,7 +494,12 @@ export default function PatientsPanel({
                 }
                 setError("");
               }}
-              className="rounded-xl bg-[#F0F7FF] px-6 py-3 text-sm font-semibold text-[#58718F] hover:bg-[#E4EEFA]"
+              className="rounded-lg px-6 py-3 text-sm font-semibold"
+              style={{
+                background: "var(--surface-subtle)",
+                border: "1px solid var(--border)",
+                color: "var(--text-secondary)",
+              }}
             >
               Cancel
             </button>
@@ -466,20 +510,24 @@ export default function PatientsPanel({
   }
 
   return (
-    <div className="mx-auto max-w-[1300px]">
-      {/* Header */}
-      <div className="mb-10 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+    <div className="mx-auto max-w-[1400px] space-y-8">
+
+      {/* Page heading */}
+      <section className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
         <div>
-          <p className="text-sm font-semibold tracking-wider text-teal-600">
-            YOUR CLINIC COMMUNITY
+          <p
+            className="text-[11px] font-semibold tracking-[0.14em]"
+            style={{ color: "var(--primary)" }}
+          >
+            CLINIC MANAGEMENT
           </p>
 
-          <h2 className="mt-3 text-3xl font-bold tracking-tight text-[#16345C]">
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight sm:text-[28px]">
             Patients
           </h2>
 
-          <p className="mt-2 text-sm leading-6 text-[#7890AC]">
-            Every patient has a story. Keep their information organized here.
+          <p className="mt-2 max-w-lg text-sm leading-6" style={mutedStyle}>
+            Manage patient records, contact information and registrations.
           </p>
         </div>
 
@@ -491,28 +539,41 @@ export default function PatientsPanel({
               setError("");
               setMessage("");
             }}
-            className="w-fit rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+            className="w-fit rounded-lg px-5 py-3 text-sm font-semibold transition-opacity hover:opacity-90"
+            style={{
+              background: "var(--primary)",
+              color: "var(--primary-foreground)",
+            }}
           >
             {showForm ? "Close form" : "+ Add patient"}
           </button>
         )}
-      </div>
+      </section>
 
+      {/* Feedback messages */}
       {message && (
-        <div className="mb-6 rounded-xl bg-teal-50 p-4 text-sm font-medium text-teal-700">
+        <div
+          className="rounded-xl px-5 py-4 text-sm font-medium"
+          style={{
+            background: "var(--success-soft)",
+            color: "var(--success)",
+            border: "1px solid var(--border)",
+          }}
+        >
           {message}
         </div>
       )}
 
-      {/* Add patient */}
+      {/* Registration form */}
       {!isReadOnly && showForm && !selectedPatient && renderPatientForm()}
 
       {/* Patient details */}
       {selectedPatient && (
-        <div className="mb-8">
+        <div className="space-y-5">
           <button
             onClick={closePatient}
-            className="mb-6 text-sm font-semibold text-blue-600 hover:text-blue-800"
+            className="text-sm font-semibold transition-opacity hover:opacity-70"
+            style={{ color: "var(--primary)" }}
           >
             ← Back to patient directory
           </button>
@@ -520,21 +581,33 @@ export default function PatientsPanel({
           {isEditing && !isReadOnly ? (
             renderPatientForm(true)
           ) : (
-            <section className="rounded-[24px] border border-[#DDE9F7] bg-white p-6 sm:p-8">
-              <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
+            <section className="p-6 sm:p-8" style={cardStyle}>
+              {/* Profile heading */}
+              <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-start">
                 <div className="flex items-center gap-4">
-                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#E4EDFF] text-2xl font-bold text-blue-700">
+                  <div
+                    className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-2xl font-semibold"
+                    style={{
+                      background: "var(--primary-soft)",
+                      color: "var(--primary)",
+                    }}
+                  >
                     {selectedPatient.full_name?.slice(0, 1).toUpperCase() || "P"}
                   </div>
 
-                  <div>
-                    <p className="text-xs font-semibold tracking-wider text-teal-600">
+                  <div className="min-w-0">
+                    <p
+                      className="text-[11px] font-semibold tracking-[0.13em]"
+                      style={{ color: "var(--primary)" }}
+                    >
                       PATIENT PROFILE
                     </p>
-                    <h3 className="mt-2 text-2xl font-bold text-[#16345C]">
+
+                    <h3 className="mt-2 break-words text-xl font-semibold sm:text-2xl">
                       {selectedPatient.full_name}
                     </h3>
-                    <p className="mt-1 text-sm text-[#7890AC]">
+
+                    <p className="mt-1 text-sm" style={mutedStyle}>
                       {selectedPatient.patient_code}
                     </p>
                   </div>
@@ -544,7 +617,11 @@ export default function PatientsPanel({
                   <div className="flex flex-wrap gap-3">
                     <button
                       onClick={startEditing}
-                      className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700"
+                      className="rounded-lg px-5 py-2.5 text-sm font-semibold"
+                      style={{
+                        background: "var(--primary)",
+                        color: "var(--primary-foreground)",
+                      }}
                     >
                       Edit patient
                     </button>
@@ -554,7 +631,12 @@ export default function PatientsPanel({
                         setDeleteTarget(selectedPatient);
                         setError("");
                       }}
-                      className="rounded-xl border border-red-200 bg-red-50 px-5 py-3 text-sm font-semibold text-red-600 hover:bg-red-100"
+                      className="rounded-lg px-5 py-2.5 text-sm font-semibold"
+                      style={{
+                        background: "var(--danger-soft)",
+                        color: "var(--danger)",
+                        border: "1px solid var(--border)",
+                      }}
                     >
                       Delete patient
                     </button>
@@ -562,7 +644,11 @@ export default function PatientsPanel({
                 )}
               </div>
 
-              <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {/* Patient information */}
+              <div
+                className="mt-8 grid grid-cols-1 gap-4 border-t pt-7 sm:grid-cols-2 lg:grid-cols-3"
+                style={{ borderColor: "var(--border)" }}
+              >
                 {[
                   ["Phone number", selectedPatient.phone],
                   ["Email address", selectedPatient.email],
@@ -576,11 +662,22 @@ export default function PatientsPanel({
                       : null,
                   ],
                 ].map(([label, value]) => (
-                  <div key={label} className="rounded-2xl bg-[#F6F9FE] p-5">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-[#8BA0B8]">
+                  <div
+                    key={label}
+                    className="rounded-xl p-5"
+                    style={{
+                      background: "var(--surface-subtle)",
+                      border: "1px solid var(--border)",
+                    }}
+                  >
+                    <p
+                      className="text-[10px] font-semibold uppercase tracking-[0.12em]"
+                      style={subtleStyle}
+                    >
                       {label}
                     </p>
-                    <p className="mt-3 break-words text-sm font-semibold capitalize text-[#16345C]">
+
+                    <p className="mt-3 break-words text-sm font-medium capitalize">
                       {value || "Not provided"}
                     </p>
                   </div>
@@ -593,27 +690,55 @@ export default function PatientsPanel({
 
       {/* Patient directory */}
       {!selectedPatient && (
-        <section>
-          <div className="mb-5">
-            <h3 className="text-lg font-bold text-[#16345C]">
-              Patient directory
-            </h3>
-            <p className="mt-1 text-sm text-[#8BA0B8]">
-              {patients.length} patients loaded
-            </p>
+        <section className="space-y-5">
+
+          {/* Directory heading */}
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-semibold tracking-tight">
+                Patient directory
+              </h3>
+              <p className="mt-1 text-xs" style={mutedStyle}>
+                Browse and manage registered patients.
+              </p>
+            </div>
+
+            <span
+              className="rounded-lg px-3 py-2 text-xs font-medium"
+              style={{
+                background: "var(--surface-subtle)",
+                color: "var(--text-secondary)",
+                border: "1px solid var(--border)",
+              }}
+            >
+              {patients.length} total patients
+            </span>
           </div>
 
           {/* Search and filters */}
-          <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <input
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                resetPage();
-              }}
-              placeholder="Search name, code, phone or email..."
-              className="rounded-xl border border-[#DDE9F7] bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 lg:col-span-1"
-            />
+          <div
+            className="grid grid-cols-1 gap-3 rounded-2xl p-4 sm:grid-cols-2 lg:grid-cols-3 sm:p-5"
+            style={cardStyle}
+          >
+            <div className="relative">
+              <span
+                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-base"
+                style={subtleStyle}
+              >
+                ⌕
+              </span>
+
+              <input
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  resetPage();
+                }}
+                placeholder="Search patients..."
+                className="w-full py-3 pl-10 pr-4 text-sm outline-none"
+                style={inputStyle}
+              />
+            </div>
 
             <select
               value={genderFilter}
@@ -621,7 +746,8 @@ export default function PatientsPanel({
                 setGenderFilter(e.target.value);
                 resetPage();
               }}
-              className="rounded-xl border border-[#DDE9F7] bg-white px-4 py-3 text-sm text-[#45617F] outline-none focus:border-blue-500"
+              className="w-full px-4 py-3 text-sm outline-none"
+              style={inputStyle}
             >
               <option value="all">All genders</option>
               <option value="male">Male</option>
@@ -636,7 +762,8 @@ export default function PatientsPanel({
                 setDateFilter(e.target.value);
                 resetPage();
               }}
-              className="rounded-xl border border-[#DDE9F7] bg-white px-4 py-3 text-sm text-[#45617F] outline-none focus:border-blue-500"
+              className="w-full px-4 py-3 text-sm outline-none"
+              style={inputStyle}
             >
               <option value="all">Any registration date</option>
               <option value="30">Last 30 days</option>
@@ -645,11 +772,11 @@ export default function PatientsPanel({
             </select>
           </div>
 
-          {/* Results */}
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm text-[#7890AC]">
+          {/* Result information */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs" style={mutedStyle}>
               {filteredPatients.length === 0
-                ? "No results"
+                ? "No results found"
                 : `Showing ${startIndex + 1}–${endIndex} of ${filteredPatients.length} patients`}
             </p>
 
@@ -661,26 +788,44 @@ export default function PatientsPanel({
                   setDateFilter("all");
                   resetPage();
                 }}
-                className="text-sm font-semibold text-blue-600 hover:text-blue-800"
+                className="text-xs font-semibold"
+                style={{ color: "var(--primary)" }}
               >
                 Clear filters
               </button>
             )}
           </div>
 
+          {/* Empty state */}
           {filteredPatients.length === 0 ? (
-            <div className="rounded-[24px] border border-dashed border-[#C9DDF3] bg-white/70 px-6 py-16 text-center">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-2xl text-blue-600">
+            <div
+              className="rounded-2xl px-6 py-16 text-center"
+              style={{
+                ...cardStyle,
+                borderStyle: "dashed",
+                boxShadow: "none",
+              }}
+            >
+              <div
+                className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl text-2xl"
+                style={{
+                  background: "var(--primary-soft)",
+                  color: "var(--primary)",
+                }}
+              >
                 ♙
               </div>
 
-              <h3 className="mt-5 text-lg font-bold text-[#16345C]">
+              <h3 className="mt-5 text-lg font-semibold">
                 {patients.length === 0
                   ? "Your patient directory is empty"
                   : "No matching patients"}
               </h3>
 
-              <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-[#8BA0B8]">
+              <p
+                className="mx-auto mt-2 max-w-sm text-sm leading-6"
+                style={mutedStyle}
+              >
                 {patients.length === 0
                   ? isReadOnly
                     ? "There are no patients available in this demo clinic."
@@ -690,16 +835,32 @@ export default function PatientsPanel({
             </div>
           ) : (
             <>
-              <div className="overflow-hidden rounded-[24px] border border-[#E1ECF8] bg-white">
+              {/* Patient table */}
+              <div className="overflow-hidden" style={cardStyle}>
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[650px] text-left text-sm">
-                    <thead className="bg-[#F5F9FF] text-xs tracking-wider text-[#8BA0B8]">
-                      <tr>
-                        <th className="px-6 py-4">PATIENT</th>
-                        <th className="px-6 py-4">PATIENT CODE</th>
-                        <th className="px-6 py-4">PHONE</th>
-                        <th className="px-6 py-4">REGISTERED</th>
-                        <th className="px-6 py-4">ACTION</th>
+                  <table className="w-full min-w-[700px] text-left text-sm">
+                    <thead>
+                      <tr
+                        style={{
+                          background: "var(--surface-subtle)",
+                          color: "var(--text-muted)",
+                        }}
+                      >
+                        <th className="px-6 py-4 text-[10px] font-semibold tracking-[0.12em]">
+                          PATIENT
+                        </th>
+                        <th className="px-6 py-4 text-[10px] font-semibold tracking-[0.12em]">
+                          PATIENT CODE
+                        </th>
+                        <th className="px-6 py-4 text-[10px] font-semibold tracking-[0.12em]">
+                          PHONE
+                        </th>
+                        <th className="px-6 py-4 text-[10px] font-semibold tracking-[0.12em]">
+                          REGISTERED
+                        </th>
+                        <th className="px-6 py-4 text-[10px] font-semibold tracking-[0.12em]">
+                          ACTION
+                        </th>
                       </tr>
                     </thead>
 
@@ -708,41 +869,67 @@ export default function PatientsPanel({
                         <tr
                           key={patient.id}
                           onClick={() => openPatient(patient)}
-                          className="cursor-pointer border-t border-[#EDF2F8] transition hover:bg-[#F1F7FF]"
+                          className="cursor-pointer transition-colors hover:bg-[var(--surface-subtle)]"
+                          style={{
+                            borderTop: "1px solid var(--border)",
+                          }}
                         >
                           <td className="px-6 py-5">
                             <div className="flex items-center gap-3">
-                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#E4EDFF] font-semibold text-blue-700">
+                              <div
+                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-semibold"
+                                style={{
+                                  background: "var(--primary-soft)",
+                                  color: "var(--primary)",
+                                }}
+                              >
                                 {patient.full_name?.slice(0, 1).toUpperCase() || "P"}
                               </div>
 
-                              <div>
-                                <p className="font-semibold text-[#16345C]">
+                              <div className="min-w-0">
+                                <p className="font-semibold">
                                   {patient.full_name}
                                 </p>
-                                <p className="mt-1 text-xs text-[#8BA0B8]">
+                                <p
+                                  className="mt-1 max-w-[180px] truncate text-xs"
+                                  style={subtleStyle}
+                                >
                                   {patient.email || "No email added"}
                                 </p>
                               </div>
                             </div>
                           </td>
 
-                          <td className="px-6 py-5 font-medium text-[#58718F]">
+                          <td
+                            className="px-6 py-5 text-xs font-medium"
+                            style={mutedStyle}
+                          >
                             {patient.patient_code}
                           </td>
 
-                          <td className="px-6 py-5 text-[#58718F]">
+                          <td
+                            className="px-6 py-5 text-xs"
+                            style={mutedStyle}
+                          >
                             {patient.phone || "—"}
                           </td>
 
-                          <td className="px-6 py-5 text-[#8BA0B8]">
+                          <td
+                            className="px-6 py-5 text-xs"
+                            style={mutedStyle}
+                          >
                             {patient.created_at
                               ? new Date(patient.created_at).toLocaleDateString("en-IN")
                               : "—"}
                           </td>
 
-                          <td className="px-6 py-5 font-semibold text-blue-600">
-                            View →
+                          <td className="px-6 py-5">
+                            <span
+                              className="text-xs font-semibold"
+                              style={{ color: "var(--primary)" }}
+                            >
+                              View profile →
+                            </span>
                           </td>
                         </tr>
                       ))}
@@ -751,9 +938,9 @@ export default function PatientsPanel({
                 </div>
               </div>
 
-              {/* Pagination controls */}
-              <div className="mt-5 flex flex-col items-center justify-between gap-4 sm:flex-row">
-                <p className="text-sm text-[#7890AC]">
+              {/* Pagination */}
+              <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
+                <p className="text-xs" style={mutedStyle}>
                   Page {safePage} of {totalPages}
                 </p>
 
@@ -761,7 +948,12 @@ export default function PatientsPanel({
                   <button
                     disabled={safePage === 1}
                     onClick={() => setCurrentPage(safePage - 1)}
-                    className="rounded-xl border border-[#DDE9F7] bg-white px-4 py-2.5 text-sm font-semibold text-[#58718F] transition hover:bg-[#F0F7FF] disabled:cursor-not-allowed disabled:opacity-40"
+                    className="rounded-lg px-4 py-2.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+                    style={{
+                      background: "var(--surface)",
+                      border: "1px solid var(--border)",
+                      color: "var(--text-secondary)",
+                    }}
                   >
                     ← Previous
                   </button>
@@ -769,7 +961,12 @@ export default function PatientsPanel({
                   <button
                     disabled={safePage === totalPages}
                     onClick={() => setCurrentPage(safePage + 1)}
-                    className="rounded-xl border border-[#DDE9F7] bg-white px-4 py-2.5 text-sm font-semibold text-[#58718F] transition hover:bg-[#F0F7FF] disabled:cursor-not-allowed disabled:opacity-40"
+                    className="rounded-lg px-4 py-2.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+                    style={{
+                      background: "var(--surface)",
+                      border: "1px solid var(--border)",
+                      color: "var(--text-secondary)",
+                    }}
                   >
                     Next →
                   </button>
@@ -782,26 +979,47 @@ export default function PatientsPanel({
 
       {/* Delete confirmation */}
       {!isReadOnly && deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#102744]/40 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-[24px] border border-[#E1ECF8] bg-white p-7 shadow-2xl">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-xl text-red-600">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+          style={{ background: "rgba(0,0,0,0.65)" }}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl p-7"
+            style={{
+              ...cardStyle,
+              boxShadow: "var(--shadow-modal)",
+            }}
+          >
+            <div
+              className="flex h-12 w-12 items-center justify-center rounded-xl text-xl font-semibold"
+              style={{
+                background: "var(--danger-soft)",
+                color: "var(--danger)",
+              }}
+            >
               !
             </div>
 
-            <h3 className="mt-5 text-xl font-bold text-[#16345C]">
+            <h3 className="mt-5 text-xl font-semibold">
               Delete this patient?
             </h3>
 
-            <p className="mt-3 text-sm leading-6 text-[#7890AC]">
+            <p className="mt-3 text-sm leading-6" style={mutedStyle}>
               You are about to permanently delete{" "}
-              <span className="font-semibold text-[#16345C]">
+              <span className="font-semibold" style={{ color: "var(--foreground)" }}>
                 {deleteTarget.full_name}
               </span>{" "}
               from your clinic records. This action cannot be undone.
             </p>
 
             {error && (
-              <p className="mt-4 rounded-xl bg-red-50 p-4 text-sm text-red-700">
+              <p
+                className="mt-4 rounded-xl p-4 text-sm"
+                style={{
+                  background: "var(--danger-soft)",
+                  color: "var(--danger)",
+                }}
+              >
                 {error}
               </p>
             )}
@@ -813,7 +1031,12 @@ export default function PatientsPanel({
                   setDeleteTarget(null);
                   setError("");
                 }}
-                className="rounded-xl bg-[#F0F7FF] px-5 py-3 text-sm font-semibold text-[#58718F] hover:bg-[#E4EEFA] disabled:opacity-50"
+                className="rounded-lg px-5 py-3 text-sm font-semibold disabled:opacity-50"
+                style={{
+                  background: "var(--surface-subtle)",
+                  border: "1px solid var(--border)",
+                  color: "var(--text-secondary)",
+                }}
               >
                 Cancel
               </button>
@@ -821,7 +1044,11 @@ export default function PatientsPanel({
               <button
                 disabled={deleting}
                 onClick={handleDeletePatient}
-                className="rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                className="rounded-lg px-5 py-3 text-sm font-semibold disabled:opacity-50"
+                style={{
+                  background: "var(--danger)",
+                  color: "#FFFFFF",
+                }}
               >
                 {deleting ? "Deleting..." : "Yes, delete patient"}
               </button>

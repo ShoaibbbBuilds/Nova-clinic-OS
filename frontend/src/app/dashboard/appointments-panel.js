@@ -11,6 +11,12 @@ const emptyForm = {
   reason: "",
 };
 
+const inputClass =
+  "w-full rounded-[var(--control-radius)] border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition placeholder:text-[var(--text-muted)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
+
+const labelClass =
+  "mb-2 block text-sm font-medium text-[var(--foreground)]";
+
 export default function AppointmentsPanel({ isReadOnly = false }) {
   const supabase = useMemo(() => createClient(), []);
 
@@ -271,30 +277,39 @@ export default function AppointmentsPanel({ isReadOnly = false }) {
 
   function statusStyle(status) {
     const styles = {
-      scheduled: "bg-blue-50 text-blue-700",
-      waiting: "bg-teal-50 text-teal-700",
-      no_show: "bg-amber-50 text-amber-700",
-      completed: "bg-green-50 text-green-700",
-      cancelled: "bg-red-50 text-red-700",
+      scheduled: "bg-[var(--info-soft)] text-[var(--info)]",
+      waiting: "bg-[var(--warning-soft)] text-[var(--warning)]",
+      no_show: "bg-[var(--surface-hover)] text-[var(--text-secondary)]",
+      completed: "bg-[var(--success-soft)] text-[var(--success)]",
+      cancelled: "bg-[var(--danger-soft)] text-[var(--danger)]",
     };
 
-    return styles[status] || "bg-slate-100 text-slate-600";
+    return styles[status] || "bg-[var(--surface-hover)] text-[var(--text-secondary)]";
+  }
+
+  function formatStatus(status) {
+    if (!status) return "Unknown";
+
+    return status
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
   }
 
   return (
     <div className="space-y-7">
-      {/* Header */}
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+      {/* Page header */}
+      <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
         <div>
-          <p className="text-sm font-medium text-blue-600">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--primary)]">
             Clinic management
           </p>
 
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-900">
+          <h1 className="mt-2 text-[28px] font-semibold tracking-tight text-[var(--foreground)]">
             Appointments
           </h1>
 
-          <p className="mt-2 text-sm text-slate-500">
+          <p className="mt-2 text-sm text-[var(--text-secondary)]">
             {isReadOnly
               ? "Explore the clinic's appointment schedule."
               : "Manage patient appointments and scheduling."}
@@ -309,22 +324,29 @@ export default function AppointmentsPanel({ isReadOnly = false }) {
               setForm(emptyForm);
               setShowForm(!showForm);
             }}
-            className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+            className="inline-flex items-center justify-center gap-2 rounded-[var(--control-radius)] bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-[var(--primary-foreground)] transition hover:bg-[var(--primary-hover)]"
           >
-            + Book appointment
+            <span className="text-lg leading-none">+</span>
+            Book appointment
           </button>
         )}
       </div>
 
-      {/* Messages */}
+      {/* Feedback messages */}
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div
+          role="alert"
+          className="rounded-[var(--card-radius)] border border-[var(--danger)]/25 bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]"
+        >
           {error}
         </div>
       )}
 
       {success && (
-        <div className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-700">
+        <div
+          role="status"
+          className="rounded-[var(--card-radius)] border border-[var(--success)]/25 bg-[var(--success-soft)] px-4 py-3 text-sm text-[var(--success)]"
+        >
           {success}
         </div>
       )}
@@ -333,7 +355,7 @@ export default function AppointmentsPanel({ isReadOnly = false }) {
       {!isReadOnly &&
         !loading &&
         (patients.length === 0 || doctors.length === 0) && (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          <div className="rounded-[var(--card-radius)] border border-[var(--warning)]/25 bg-[var(--warning-soft)] p-4 text-sm text-[var(--warning)]">
             You need at least one patient and one active doctor before booking
             an appointment.
           </div>
@@ -341,22 +363,26 @@ export default function AppointmentsPanel({ isReadOnly = false }) {
 
       {/* Booking form */}
       {!isReadOnly && showForm && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+        <section className="rounded-[var(--card-radius)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-card)] sm:p-7">
           <div className="mb-6">
-            <h2 className="text-xl font-semibold text-slate-900">
+            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--primary)]">
+              New booking
+            </p>
+
+            <h2 className="mt-2 text-lg font-semibold text-[var(--foreground)]">
               Book appointment
             </h2>
 
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">
               Select a patient, doctor and appointment time.
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid gap-5 sm:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Patient *
+                <label className={labelClass}>
+                  Patient <span className="text-[var(--danger)]">*</span>
                 </label>
 
                 <select
@@ -364,7 +390,7 @@ export default function AppointmentsPanel({ isReadOnly = false }) {
                   name="patient_id"
                   value={form.patient_id}
                   onChange={handleChange}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500"
+                  className={inputClass}
                 >
                   <option value="">Select patient</option>
 
@@ -377,8 +403,8 @@ export default function AppointmentsPanel({ isReadOnly = false }) {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Doctor *
+                <label className={labelClass}>
+                  Doctor <span className="text-[var(--danger)]">*</span>
                 </label>
 
                 <select
@@ -386,7 +412,7 @@ export default function AppointmentsPanel({ isReadOnly = false }) {
                   name="doctor_id"
                   value={form.doctor_id}
                   onChange={handleChange}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500"
+                  className={inputClass}
                 >
                   <option value="">Select doctor</option>
 
@@ -402,8 +428,8 @@ export default function AppointmentsPanel({ isReadOnly = false }) {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Date and time *
+                <label className={labelClass}>
+                  Date and time <span className="text-[var(--danger)]">*</span>
                 </label>
 
                 <input
@@ -412,30 +438,28 @@ export default function AppointmentsPanel({ isReadOnly = false }) {
                   name="appointment_at"
                   value={form.appointment_at}
                   onChange={handleChange}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500"
+                  className={inputClass}
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Reason for visit
-                </label>
+                <label className={labelClass}>Reason for visit</label>
 
                 <input
                   name="reason"
                   value={form.reason}
                   onChange={handleChange}
                   placeholder="Optional reason"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500"
+                  className={inputClass}
                 />
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-3 border-t border-slate-100 pt-5">
+            <div className="flex flex-wrap gap-3 border-t border-[var(--border)] pt-5">
               <button
                 type="submit"
                 disabled={saving || patients.length === 0 || doctors.length === 0}
-                className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
+                className="rounded-[var(--control-radius)] bg-[var(--primary)] px-6 py-3 text-sm font-semibold text-[var(--primary-foreground)] transition hover:bg-[var(--primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {saving ? "Booking..." : "Confirm appointment"}
               </button>
@@ -443,40 +467,42 @@ export default function AppointmentsPanel({ isReadOnly = false }) {
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="rounded-xl border border-slate-200 px-6 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                className="rounded-[var(--control-radius)] border border-[var(--border-strong)] bg-[var(--surface)] px-6 py-3 text-sm font-medium text-[var(--text-secondary)] transition hover:bg-[var(--surface-hover)]"
               >
                 Cancel
               </button>
             </div>
           </form>
-        </div>
+        </section>
       )}
 
       {/* Appointment directory */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-        <div className="mb-5 flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+      <section className="overflow-hidden rounded-[var(--card-radius)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-card)]">
+        <div className="flex flex-col justify-between gap-5 border-b border-[var(--border)] p-5 sm:p-6 lg:flex-row lg:items-center">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">
+            <h2 className="text-base font-semibold text-[var(--foreground)]">
               Appointment directory
             </h2>
 
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">
               {filteredAppointments.length} appointments found
             </p>
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
+          <div className={`${inputClass} sm:w-64`}>
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search patient or doctor..."
-              className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 sm:w-64"
+              aria-label="Search patient or doctor"
+              className="w-full sm:w-64"
             />
 
             <select
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
-              className="rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500"
+              aria-label="Filter by appointment status"
+              className={`${inputClass} sm:w-44`}
             >
               <option value="all">All statuses</option>
               <option value="scheduled">Scheduled</option>
@@ -489,18 +515,32 @@ export default function AppointmentsPanel({ isReadOnly = false }) {
         </div>
 
         {loading ? (
-          <div className="py-12 text-center text-sm text-slate-500">
-            Loading appointments...
+          <div className="px-5 py-16 text-center">
+            <p className="text-sm text-[var(--text-secondary)]">
+              Loading appointments...
+            </p>
           </div>
         ) : filteredAppointments.length === 0 ? (
-          <div className="rounded-xl bg-slate-50 px-5 py-12 text-center">
-            <div className="text-3xl">📅</div>
+          <div className="px-5 py-16 text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--surface-subtle)] text-[var(--text-secondary)]">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                className="h-6 w-6"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                aria-hidden="true"
+              >
+                <rect x="3.5" y="5" width="17" height="16" rx="2.5" />
+                <path d="M7.5 3v4M16.5 3v4M3.5 9.5h17M8 13h3M8 16.5h3" />
+              </svg>
+            </div>
 
-            <h3 className="mt-3 font-semibold text-slate-800">
+            <h3 className="mt-4 text-sm font-semibold text-[var(--foreground)]">
               No appointments found
             </h3>
 
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">
               {isReadOnly
                 ? "There are no appointments to display."
                 : "Appointments will appear here once booked."}
@@ -508,16 +548,16 @@ export default function AppointmentsPanel({ isReadOnly = false }) {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[750px] text-left">
+            <table className="w-full min-w-[780px] text-left">
               <thead>
-                <tr className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
-                  <th className="px-3 py-4 font-medium">Patient</th>
-                  <th className="px-3 py-4 font-medium">Doctor</th>
-                  <th className="px-3 py-4 font-medium">Date & time</th>
-                  <th className="px-3 py-4 font-medium">Status</th>
+                <tr className="border-b border-[var(--border)] bg-[var(--surface-subtle)] text-[11px] font-semibold uppercase tracking-[0.09em] text-[var(--text-muted)]">
+                  <th className="px-5 py-4">Patient</th>
+                  <th className="px-5 py-4">Doctor</th>
+                  <th className="px-5 py-4">Date & time</th>
+                  <th className="px-5 py-4">Status</th>
 
                   {!isReadOnly && (
-                    <th className="px-3 py-4 font-medium">Update status</th>
+                    <th className="px-5 py-4">Update status</th>
                   )}
                 </tr>
               </thead>
@@ -526,50 +566,50 @@ export default function AppointmentsPanel({ isReadOnly = false }) {
                 {filteredAppointments.map((appointment) => (
                   <tr
                     key={appointment.id}
-                    className="border-b border-slate-50 last:border-0 hover:bg-slate-50/70"
+                    className="border-b border-[var(--border)] last:border-0 transition-colors hover:bg-[var(--surface-hover)]"
                   >
-                    <td className="px-3 py-4">
-                      <p className="font-medium text-slate-800">
+                    <td className="px-5 py-4">
+                      <p className="text-sm font-medium text-[var(--foreground)]">
                         {appointment.patients?.full_name || "Unknown patient"}
                       </p>
 
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="mt-1 text-xs text-[var(--text-secondary)]">
                         {appointment.patients?.phone || "—"}
                       </p>
                     </td>
 
-                    <td className="px-3 py-4">
-                      <p className="font-medium text-slate-800">
+                    <td className="px-5 py-4">
+                      <p className="text-sm font-medium text-[var(--foreground)]">
                         {appointment.doctors?.full_name || "Unknown doctor"}
                       </p>
 
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="mt-1 text-xs text-[var(--text-secondary)]">
                         {appointment.doctors?.specialization || "—"}
                       </p>
                     </td>
 
-                    <td className="px-3 py-4">
-                      <p className="text-sm font-medium text-slate-700">
+                    <td className="px-5 py-4">
+                      <p className="text-sm font-medium text-[var(--foreground)]">
                         {formatDate(appointment.appointment_at)}
                       </p>
 
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="mt-1 text-xs text-[var(--text-secondary)]">
                         {formatTime(appointment.appointment_at)}
                       </p>
                     </td>
 
-                    <td className="px-3 py-4">
+                    <td className="px-5 py-4">
                       <span
-                        className={`rounded-full px-3 py-1 text-xs font-medium ${statusStyle(
+                        className={`inline-flex rounded-md px-2.5 py-1 text-xs font-medium ${statusStyle(
                           appointment.status
                         )}`}
                       >
-                        {appointment.status}
+                        {formatStatus(appointment.status)}
                       </span>
                     </td>
 
                     {!isReadOnly && (
-                      <td className="px-3 py-4">
+                      <td className="px-5 py-4">
                         <select
                           value={appointment.status}
                           onChange={(event) =>
@@ -578,7 +618,8 @@ export default function AppointmentsPanel({ isReadOnly = false }) {
                               event.target.value
                             )
                           }
-                          className="rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-blue-500"
+                          aria-label={`Update status for ${appointment.patients?.full_name || "appointment"}`}
+                          className={`${inputClass} min-w-36 px-3 py-2 text-xs`}
                         >
                           <option value="scheduled">Scheduled</option>
                           <option value="waiting">Waiting</option>
@@ -594,7 +635,7 @@ export default function AppointmentsPanel({ isReadOnly = false }) {
             </table>
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }

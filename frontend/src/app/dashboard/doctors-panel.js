@@ -12,6 +12,12 @@ const emptyForm = {
   consultation_fee: "",
 };
 
+const inputClass =
+  "w-full rounded-[var(--control-radius)] border border-[var(--border-strong)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition placeholder:text-[var(--text-muted)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/10";
+
+const labelClass =
+  "mb-2 block text-sm font-medium text-[var(--foreground)]";
+
 export default function DoctorsPanel({ isReadOnly = false }) {
   const supabase = useMemo(() => createClient(), []);
 
@@ -318,18 +324,18 @@ export default function DoctorsPanel({ isReadOnly = false }) {
 
   return (
     <div className="space-y-7">
-      {/* Header */}
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+      {/* Page header */}
+      <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
         <div>
-          <p className="text-sm font-medium text-blue-600">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--primary)]">
             Clinic management
           </p>
 
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-900">
+          <h1 className="mt-2 text-[28px] font-semibold tracking-tight text-[var(--foreground)]">
             Doctors
           </h1>
 
-          <p className="mt-2 text-sm text-slate-500">
+          <p className="mt-2 text-sm text-[var(--text-secondary)]">
             {isReadOnly
               ? "Explore the doctors in this clinic."
               : "Manage your clinic's doctors and their professional details."}
@@ -339,53 +345,111 @@ export default function DoctorsPanel({ isReadOnly = false }) {
         {!isReadOnly && (
           <button
             onClick={openAddForm}
-            className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+            className="inline-flex items-center justify-center gap-2 rounded-[var(--control-radius)] bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-[var(--primary-foreground)] transition hover:bg-[var(--primary-hover)]"
           >
-            + Add doctor
+            <span className="text-lg leading-none">+</span>
+            Add doctor
           </button>
         )}
       </div>
 
-      {/* Messages */}
+      {/* Feedback messages */}
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div
+          role="alert"
+          className="rounded-[var(--card-radius)] border border-[var(--danger)]/25 bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]"
+        >
           {error}
         </div>
       )}
 
       {success && (
-        <div className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-700">
+        <div
+          role="status"
+          className="rounded-[var(--card-radius)] border border-[var(--success)]/25 bg-[var(--success-soft)] px-4 py-3 text-sm text-[var(--success)]"
+        >
           {success}
         </div>
       )}
 
-      {/* Stats */}
+      {/* Overview statistics */}
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-5">
-          <p className="text-sm text-blue-700">Total doctors</p>
-          <p className="mt-2 text-3xl font-semibold text-slate-900">
+        <div className="rounded-[var(--card-radius)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-card)]">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-[var(--text-secondary)]">
+              Total doctors
+            </p>
+
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--primary-soft)] text-[var(--primary)]">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                className="h-5 w-5"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                aria-hidden="true"
+              >
+                <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
+                <path d="M4 21v-1.5A5.5 5.5 0 0 1 9.5 14h5a5.5 5.5 0 0 1 5.5 5.5V21" />
+                <path d="M19 8v6M16 11h6" />
+              </svg>
+            </span>
+          </div>
+
+          <p className="mt-4 text-3xl font-semibold tracking-tight text-[var(--foreground)]">
             {doctors.length}
+          </p>
+
+          <p className="mt-1 text-xs text-[var(--text-muted)]">
+            Registered with this clinic
           </p>
         </div>
 
-        <div className="rounded-2xl border border-teal-100 bg-teal-50/70 p-5">
-          <p className="text-sm text-teal-700">Active doctors</p>
-          <p className="mt-2 text-3xl font-semibold text-slate-900">
+        <div className="rounded-[var(--card-radius)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-card)]">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-[var(--text-secondary)]">
+              Active doctors
+            </p>
+
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--success-soft)] text-[var(--success)]">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                className="h-5 w-5"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                aria-hidden="true"
+              >
+                <path d="m5 12 4 4L19 6" />
+                <circle cx="12" cy="12" r="9" />
+              </svg>
+            </span>
+          </div>
+
+          <p className="mt-4 text-3xl font-semibold tracking-tight text-[var(--foreground)]">
             {activeCount}
+          </p>
+
+          <p className="mt-1 text-xs text-[var(--text-muted)]">
+            Currently available
           </p>
         </div>
       </div>
 
-      {/* Form */}
+      {/* Doctor form */}
       {!isReadOnly && showForm && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-          <div className="mb-6 flex items-center justify-between">
+        <section className="rounded-[var(--card-radius)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-card)] sm:p-7">
+          <div className="mb-6 flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-xl font-semibold text-slate-900">
+              <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--primary)]">
+                Doctor details
+              </p>
+
+              <h2 className="mt-2 text-lg font-semibold text-[var(--foreground)]">
                 {editingId ? "Edit doctor" : "Register a doctor"}
               </h2>
 
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-[var(--text-secondary)]">
                 Add the doctor's professional information.
               </p>
             </div>
@@ -393,17 +457,17 @@ export default function DoctorsPanel({ isReadOnly = false }) {
             <button
               type="button"
               onClick={() => setShowForm(false)}
-              className="rounded-lg px-3 py-2 text-sm text-slate-500 hover:bg-slate-100"
+              className="rounded-[var(--control-radius)] border border-[var(--border)] px-3 py-2 text-sm text-[var(--text-secondary)] transition hover:bg-[var(--surface-hover)]"
             >
               Close
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid gap-5 sm:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Full name *
+                <label className={labelClass}>
+                  Full name <span className="text-[var(--danger)]">*</span>
                 </label>
 
                 <input
@@ -412,42 +476,36 @@ export default function DoctorsPanel({ isReadOnly = false }) {
                   value={form.full_name}
                   onChange={handleChange}
                   placeholder="e.g. Dr. Ayesha Khan"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  className={inputClass}
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Specialization
-                </label>
+                <label className={labelClass}>Specialization</label>
 
                 <input
                   name="specialization"
                   value={form.specialization}
                   onChange={handleChange}
                   placeholder="e.g. Cardiologist"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  className={inputClass}
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Phone number
-                </label>
+                <label className={labelClass}>Phone number</label>
 
                 <input
                   name="phone"
                   value={form.phone}
                   onChange={handleChange}
                   placeholder="Phone number"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  className={inputClass}
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Email address
-                </label>
+                <label className={labelClass}>Email address</label>
 
                 <input
                   type="email"
@@ -455,12 +513,12 @@ export default function DoctorsPanel({ isReadOnly = false }) {
                   value={form.email}
                   onChange={handleChange}
                   placeholder="doctor@example.com"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  className={inputClass}
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
+                <label className={labelClass}>
                   Consultation fee (₹)
                 </label>
 
@@ -472,16 +530,16 @@ export default function DoctorsPanel({ isReadOnly = false }) {
                   value={form.consultation_fee}
                   onChange={handleChange}
                   placeholder="500"
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  className={inputClass}
                 />
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-3 border-t border-slate-100 pt-5">
+            <div className="flex flex-wrap gap-3 border-t border-[var(--border)] pt-5">
               <button
                 type="submit"
                 disabled={saving}
-                className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
+                className="rounded-[var(--control-radius)] bg-[var(--primary)] px-6 py-3 text-sm font-semibold text-[var(--primary-foreground)] transition hover:bg-[var(--primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {saving
                   ? "Saving..."
@@ -493,24 +551,24 @@ export default function DoctorsPanel({ isReadOnly = false }) {
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="rounded-xl border border-slate-200 px-6 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                className="rounded-[var(--control-radius)] border border-[var(--border-strong)] bg-[var(--surface)] px-6 py-3 text-sm font-medium text-[var(--text-secondary)] transition hover:bg-[var(--surface-hover)]"
               >
                 Cancel
               </button>
             </div>
           </form>
-        </div>
+        </section>
       )}
 
-      {/* Directory */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-        <div className="mb-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+      {/* Doctor directory */}
+      <section className="overflow-hidden rounded-[var(--card-radius)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-card)]">
+        <div className="flex flex-col justify-between gap-5 border-b border-[var(--border)] p-5 sm:flex-row sm:items-center sm:p-6">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">
+            <h2 className="text-base font-semibold text-[var(--foreground)]">
               Doctor directory
             </h2>
 
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">
               {filteredDoctors.length} doctors found
             </p>
           </div>
@@ -519,23 +577,38 @@ export default function DoctorsPanel({ isReadOnly = false }) {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search doctors..."
-            className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 sm:max-w-xs"
+            aria-label="Search doctors"
+            className={`${inputClass} sm:max-w-xs`}
           />
         </div>
 
         {loading ? (
-          <div className="py-12 text-center text-sm text-slate-500">
+          <div className="px-5 py-16 text-center text-sm text-[var(--text-secondary)]">
             Loading doctors...
           </div>
         ) : filteredDoctors.length === 0 ? (
-          <div className="rounded-xl bg-slate-50 px-5 py-12 text-center">
-            <div className="text-3xl">🩺</div>
+          <div className="px-5 py-16 text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--surface-subtle)] text-[var(--text-secondary)]">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                className="h-6 w-6"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                aria-hidden="true"
+              >
+                <path d="M8 4v4a4 4 0 0 0 8 0V4" />
+                <path d="M6 4h4M14 4h4M12 12v3" />
+                <path d="M7 21v-1a5 5 0 0 1 10 0v1" />
+                <path d="M12 15v-3" />
+              </svg>
+            </div>
 
-            <h3 className="mt-3 font-semibold text-slate-800">
+            <h3 className="mt-4 text-sm font-semibold text-[var(--foreground)]">
               No doctors found
             </h3>
 
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">
               {isReadOnly
                 ? "No doctors are currently available."
                 : "Add your first doctor to get started."}
@@ -544,7 +617,7 @@ export default function DoctorsPanel({ isReadOnly = false }) {
             {!isReadOnly && !search && (
               <button
                 onClick={openAddForm}
-                className="mt-4 text-sm font-semibold text-blue-600 hover:text-blue-700"
+                className="mt-4 text-sm font-semibold text-[var(--primary)] transition hover:opacity-80"
               >
                 + Register a doctor
               </button>
@@ -552,18 +625,16 @@ export default function DoctorsPanel({ isReadOnly = false }) {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[700px] text-left">
+            <table className="w-full min-w-[760px] text-left">
               <thead>
-                <tr className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
-                  <th className="px-3 py-4 font-medium">Doctor</th>
-                  <th className="px-3 py-4 font-medium">Contact</th>
-                  <th className="px-3 py-4 font-medium">Fee</th>
-                  <th className="px-3 py-4 font-medium">Status</th>
+                <tr className="border-b border-[var(--border)] bg-[var(--surface-subtle)] text-[11px] font-semibold uppercase tracking-[0.09em] text-[var(--text-muted)]">
+                  <th className="px-5 py-4">Doctor</th>
+                  <th className="px-5 py-4">Contact</th>
+                  <th className="px-5 py-4">Fee</th>
+                  <th className="px-5 py-4">Status</th>
 
                   {!isReadOnly && (
-                    <th className="px-3 py-4 text-right font-medium">
-                      Actions
-                    </th>
+                    <th className="px-5 py-4 text-right">Actions</th>
                   )}
                 </tr>
               </thead>
@@ -572,40 +643,40 @@ export default function DoctorsPanel({ isReadOnly = false }) {
                 {filteredDoctors.map((doctor) => (
                   <tr
                     key={doctor.id}
-                    className="border-b border-slate-50 last:border-0 hover:bg-slate-50/70"
+                    className="border-b border-[var(--border)] last:border-0 transition-colors hover:bg-[var(--surface-hover)]"
                   >
-                    <td className="px-3 py-4">
-                      <p className="font-medium text-slate-800">
+                    <td className="px-5 py-4">
+                      <p className="text-sm font-medium text-[var(--foreground)]">
                         {doctor.full_name}
                       </p>
 
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="mt-1 text-xs text-[var(--text-secondary)]">
                         {doctor.specialization || "Specialization not added"}
                       </p>
                     </td>
 
-                    <td className="px-3 py-4">
-                      <p className="text-sm text-slate-700">
+                    <td className="px-5 py-4">
+                      <p className="text-sm text-[var(--foreground)]">
                         {doctor.phone || "—"}
                       </p>
 
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="mt-1 text-xs text-[var(--text-secondary)]">
                         {doctor.email || "—"}
                       </p>
                     </td>
 
-                    <td className="px-3 py-4 text-sm font-medium text-slate-700">
+                    <td className="px-5 py-4 text-sm font-medium text-[var(--foreground)]">
                       {doctor.consultation_fee == null
                         ? "—"
                         : `₹${Number(doctor.consultation_fee).toLocaleString("en-IN")}`}
                     </td>
 
-                    <td className="px-3 py-4">
+                    <td className="px-5 py-4">
                       <span
-                        className={`rounded-full px-3 py-1 text-xs font-medium ${
+                        className={`inline-flex rounded-md px-2.5 py-1 text-xs font-medium ${
                           doctor.is_active
-                            ? "bg-teal-50 text-teal-700"
-                            : "bg-amber-50 text-amber-700"
+                            ? "bg-[var(--success-soft)] text-[var(--success)]"
+                            : "bg-[var(--warning-soft)] text-[var(--warning)]"
                         }`}
                       >
                         {doctor.is_active ? "Active" : "Inactive"}
@@ -613,25 +684,25 @@ export default function DoctorsPanel({ isReadOnly = false }) {
                     </td>
 
                     {!isReadOnly && (
-                      <td className="px-3 py-4">
+                      <td className="px-5 py-4">
                         <div className="flex justify-end gap-3 text-sm">
                           <button
                             onClick={() => openEditForm(doctor)}
-                            className="font-medium text-blue-600 hover:text-blue-800"
+                            className="font-medium text-[var(--primary)] transition hover:opacity-75"
                           >
                             Edit
                           </button>
 
                           <button
                             onClick={() => toggleStatus(doctor)}
-                            className="font-medium text-amber-600 hover:text-amber-800"
+                            className="font-medium text-[var(--warning)] transition hover:opacity-75"
                           >
                             {doctor.is_active ? "Deactivate" : "Activate"}
                           </button>
 
                           <button
                             onClick={() => deleteDoctor(doctor)}
-                            className="font-medium text-red-500 hover:text-red-700"
+                            className="font-medium text-[var(--danger)] transition hover:opacity-75"
                           >
                             Delete
                           </button>
@@ -644,7 +715,7 @@ export default function DoctorsPanel({ isReadOnly = false }) {
             </table>
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }

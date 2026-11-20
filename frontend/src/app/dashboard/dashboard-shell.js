@@ -1,5 +1,6 @@
 
 "use client";
+
 import SettingsPanel from "./settings-panel";
 import StaffPanel from "./staff-panel";
 import AppointmentsPanel from "./appointments-panel";
@@ -7,9 +8,11 @@ import BillingPanel from "./billing-panel";
 import ReportsPanel from "./reports-panel";
 import DoctorsPanel from "./doctors-panel";
 import PatientsPanel from "./patients-panel";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+
+const THEME_KEY = "nova-clinic-theme";
 
 const navigation = [
   { name: "Overview", symbol: "⌂", roles: ["admin", "receptionist", "doctor", "demo"] },
@@ -22,6 +25,13 @@ const navigation = [
   { name: "Settings", symbol: "⚙", roles: ["admin"] },
 ];
 
+const statColors = {
+  blue: { background: "var(--primary-soft)", color: "var(--primary)" },
+  teal: { background: "var(--info-soft)", color: "var(--teal)" },
+  purple: { background: "var(--surface-subtle)", color: "var(--lavender)" },
+  amber: { background: "var(--warning-soft)", color: "var(--warning)" },
+};
+
 export default function DashboardShell({
   email,
   fullName,
@@ -31,21 +41,45 @@ export default function DashboardShell({
   clinicId,
   userId,
   role,
-  demoPersona
+  demoPersona,
 }) {
   const [activePage, setActivePage] = useState("Overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-
   const [previewRole, setPreviewRole] = useState(demoPersona || "admin");
+  const [theme, setTheme] = useState(null);
 
-  const displayRole = role === "demo" ? previewRole : role;
-  const navItems = navigation.filter((item) =>
-    item.roles.includes(displayRole) &&
-    (role !== "demo" || item.name !== "Staff")
-  );
   const router = useRouter();
   const supabase = createClient();
+
+  // Load the saved theme when the dashboard opens.
+  useEffect(() => {
+    const savedTheme = localStorage.getItem(THEME_KEY);
+    const initialTheme = savedTheme === "dark" ? "dark" : "light";
+
+    document.documentElement.dataset.theme = initialTheme;
+    setTheme(initialTheme);
+  }, []);
+
+  // Apply and remember theme changes.
+  useEffect(() => {
+    if (!theme) return;
+
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem(THEME_KEY, theme);
+  }, [theme]);
+
+  function toggleTheme() {
+    setTheme((current) => current === "dark" ? "light" : "dark");
+  }
+
+  const displayRole = role === "demo" ? previewRole : role;
+
+  const navItems = navigation.filter(
+    (item) =>
+      item.roles.includes(displayRole) &&
+      (role !== "demo" || item.name !== "Staff")
+  );
 
   const stats = [
     {
@@ -93,137 +127,190 @@ export default function DashboardShell({
     router.refresh();
   }
 
+  const cardStyle = {
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: "var(--card-radius)",
+    boxShadow: "var(--shadow-card)",
+  };
+
+  const mutedText = { color: "var(--text-secondary)" };
+  const subtleText = { color: "var(--text-muted)" };
+
   return (
-    <div className="min-h-screen bg-[#F0F7FF] text-[#16345C]">
+    <div
+      className="min-h-screen"
+      style={{
+        background: "var(--background)",
+        color: "var(--foreground)",
+      }}
+    >
+      {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <button
           aria-label="Close navigation"
           onClick={() => setSidebarOpen(false)}
-          className="fixed inset-0 z-40 bg-slate-950/30 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/30 lg:hidden"
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[255px] flex-col border-r border-[#E0EBF8] bg-white transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
-          } lg:translate-x-0`}
+        className={`fixed left-0 top-0 z-50 m-0 flex h-screen w-[264px] flex-col p-4 transition-transform duration-200 lg:translate-x-0 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
       >
-        <div className="flex h-[82px] items-center gap-3 border-b border-[#EAF0F8] px-6">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-xl font-bold text-white">
-            N
-          </div>
-
-          <div className="min-w-0">
-            <h1 className="truncate text-lg font-bold tracking-tight">
-              {clinicName}
-            </h1>
-
-            <p className="text-xs font-medium tracking-wider text-[#7890AC]">
-              MANAGEMENT OS
-            </p>
-          </div>
-        </div>
-
-        <div className="px-5 pt-7">
-          <p className="mb-3 px-3 text-[10px] font-bold tracking-[0.16em] text-[#9AAEC4]">
-            WORKSPACE
-          </p>
-
-          <nav className="space-y-1">
-            {navItems.map((item) => {
-              const active = activePage === item.name;
-
-              return (
-                <button
-                  key={item.name}
-                  onClick={() => {
-                    setActivePage(item.name);
-                    setSidebarOpen(false);
-                  }}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition ${active
-                    ? "bg-blue-50 text-blue-700"
-                    : "text-[#7187A2] hover:bg-[#F4F8FD] hover:text-[#16345C]"
-                    }`}
-                >
-                  <span
-                    className={`flex h-8 w-8 items-center justify-center rounded-lg text-lg ${active
-                      ? "bg-blue-100 text-blue-700"
-                      : "bg-[#F3F7FC] text-[#7187A2]"
-                      }`}
-                  >
-                    {item.symbol}
-                  </span>
-
-                  {item.name}
-
-                  {![
-                    "Overview",
-                    "Patients",
-                    "Doctors",
-                    "Appointments",
-                    "Billing",
-                    "Staff",
-                    "Reports",
-                    "Settings",
-                  ].includes(item.name) && (
-                      <span className="ml-auto text-[10px] text-[#A5B5C8]">
-                        SOON
-                      </span>
-                    )}
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-
-        <div className="mt-auto p-5">
-          <div className="rounded-2xl bg-[#F0F7FF] p-4">
-            <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-teal-100 text-teal-700">
-              ✦
+        <div
+          className="flex h-full flex-col overflow-hidden"
+          style={{
+            background: "var(--sidebar)",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--sidebar-radius)",
+            boxShadow: "var(--shadow-floating)",
+          }}
+        >
+          {/* Brand */}
+          <div
+            className="flex h-[72px] shrink-0 items-center gap-3 px-5"
+            style={{ borderBottom: "1px solid var(--border)" }}
+          >
+            <div
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg font-bold"
+              style={{
+                background: "var(--primary)",
+                color: "var(--primary-foreground)",
+              }}
+            >
+              N
             </div>
 
-            <p className="text-sm font-semibold">Need assistance?</p>
-
-            <p className="mt-1 text-xs leading-5 text-[#7890AC]">
-              Your clinic workspace is ready to grow.
-            </p>
+            <div className="min-w-0">
+              <h1 className="truncate text-[15px] font-semibold tracking-tight">
+                {clinicName}
+              </h1>
+              <p
+                className="mt-0.5 text-[10px] font-semibold tracking-[0.14em]"
+                style={subtleText}
+              >
+                MANAGEMENT OS
+              </p>
+            </div>
           </div>
 
-          <button
-            onClick={handleLogout}
-            disabled={loggingOut}
-            className="mt-4 w-full rounded-xl px-3 py-3 text-left text-sm font-medium text-[#7187A2] transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-          >
-            ↪ {loggingOut ? "Signing out..." : "Sign out"}
-          </button>
+          {/* Navigation */}
+          <div className="px-3 pt-7">
+            <p
+              className="mb-3 px-3 text-[10px] font-semibold tracking-[0.16em]"
+              style={subtleText}
+            >
+              WORKSPACE
+            </p>
+
+            <nav className="space-y-1">
+              {navItems.map((item) => {
+                const active = activePage === item.name;
+
+                return (
+                  <button
+                    key={item.name}
+                    onClick={() => {
+                      setActivePage(item.name);
+                      setSidebarOpen(false);
+                    }}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] font-medium transition-colors"
+                    style={{
+                      background: active
+                        ? "var(--primary-soft)"
+                        : "transparent",
+                      color: active
+                        ? "var(--primary)"
+                        : "var(--text-secondary)",
+                    }}
+                  >
+                    <span
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-base"
+                      style={{
+                        background: active
+                          ? "var(--surface)"
+                          : "var(--surface-subtle)",
+                        color: active
+                          ? "var(--primary)"
+                          : "var(--text-secondary)",
+                      }}
+                    >
+                      {item.symbol}
+                    </span>
+
+                    {item.name}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+
+          {/* Sidebar bottom */}
+          <div className="mt-auto p-4">
+            
+
+            <button
+              onClick={handleLogout}
+              disabled={loggingOut}
+              className="mt-3 flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-[13px] font-medium transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+              style={mutedText}
+            >
+              <span className="text-lg">↪</span>
+              {loggingOut ? "Signing out..." : "Sign out"}
+            </button>
+          </div>
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="min-h-screen lg:ml-[255px]">
-        {/* Top navigation */}
-        <header className="sticky top-0 z-30 flex h-[82px] items-center justify-between border-b border-[#E0EBF8] bg-white/90 px-5 backdrop-blur-xl sm:px-8">
-          <div className="flex items-center gap-3">
+      {/* Main area */}
+      <main className="min-h-screen lg:ml-[264px]">
+        {/* Header */}
+        <header
+          className="sticky top-0 z-30 flex h-[72px] items-center justify-between gap-3 px-5 sm:px-8"
+          style={{
+            background: "var(--surface)",
+            borderBottom: "1px solid var(--border)",
+          }}
+        >
+          <div className="flex min-w-0 items-center gap-3">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="rounded-lg border border-[#E0EBF8] px-3 py-2 text-lg lg:hidden"
+              className="rounded-lg px-3 py-2 text-lg lg:hidden"
+              style={{
+                border: "1px solid var(--border)",
+                color: "var(--foreground)",
+              }}
               aria-label="Open navigation"
             >
               ☰
             </button>
 
-            <div>
-              <p className="text-sm font-semibold">{activePage}</p>
-
-              <p className="hidden text-xs text-[#8BA0B8] sm:block">
+            <div className="min-w-0">
+              <p className="truncate text-[15px] font-semibold">
+                {activePage}
+              </p>
+              <p
+                className="hidden text-xs sm:block"
+                style={subtleText}
+              >
                 Nova Clinic OS / {activePage}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 sm:gap-5">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-4">
+            {/* Demo persona selector */}
             {role === "demo" && (
-              <div className="hidden items-center gap-2 rounded-xl border border-[#E0EBF8] bg-[#F7FAFF] p-1 sm:flex">
+              <div
+                className="hidden items-center gap-1 rounded-lg p-1 sm:flex"
+                style={{
+                  background: "var(--surface-subtle)",
+                  border: "1px solid var(--border)",
+                }}
+              >
                 {["admin", "receptionist", "doctor"].map((persona) => (
                   <button
                     key={persona}
@@ -231,10 +318,21 @@ export default function DashboardShell({
                       setPreviewRole(persona);
                       setActivePage("Overview");
                     }}
-                    className={`rounded-lg px-3 py-2 text-xs font-semibold capitalize transition ${previewRole === persona
-                      ? "bg-white text-blue-700 shadow-sm"
-                      : "text-[#7890AC] hover:text-[#16345C]"
-                      }`}
+                    className="rounded-md px-2.5 py-2 text-[11px] font-semibold capitalize transition-colors sm:px-3"
+                    style={{
+                      background:
+                        previewRole === persona
+                          ? "var(--surface)"
+                          : "transparent",
+                      color:
+                        previewRole === persona
+                          ? "var(--primary)"
+                          : "var(--text-secondary)",
+                      boxShadow:
+                        previewRole === persona
+                          ? "var(--shadow-card)"
+                          : "none",
+                    }}
                   >
                     {persona}
                   </button>
@@ -242,22 +340,52 @@ export default function DashboardShell({
               </div>
             )}
 
-            <div className="flex items-center gap-3 border-l border-[#E5EDF6] pl-3 sm:pl-5">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#E4EDFF] text-sm font-bold text-blue-700">
+            {/* Theme toggle */}
+            <button
+              onClick={toggleTheme}
+              aria-label={
+                theme === "dark"
+                  ? "Switch to light theme"
+                  : "Switch to dark theme"
+              }
+              title={
+                theme === "dark"
+                  ? "Switch to light theme"
+                  : "Switch to dark theme"
+              }
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-lg transition-colors"
+              style={{
+                background: "var(--surface-subtle)",
+                border: "1px solid var(--border)",
+                color: "var(--text-secondary)",
+              }}
+            >
+              {theme === "dark" ? "☀" : "☾"}
+            </button>
+
+            {/* User profile */}
+            <div
+              className="flex items-center gap-2 border-l pl-3 sm:gap-3 sm:pl-4"
+              style={{ borderColor: "var(--border)" }}
+            >
+              <div
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
+                style={{
+                  background: "var(--primary-soft)",
+                  color: "var(--primary)",
+                }}
+              >
                 {fullName?.slice(0, 1).toUpperCase() || "A"}
               </div>
-              {role === "demo" && (
-                <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700">
-                  DEMO MODE · READ ONLY
-                </span>
-              )}
 
-              <div className="hidden sm:block">
-                <p className="max-w-[180px] truncate text-sm font-semibold">
+              <div className="hidden min-w-0 sm:block">
+                <p className="max-w-[160px] truncate text-xs font-semibold">
                   {fullName || "Clinic Admin"}
                 </p>
-
-                <p className="max-w-[180px] truncate text-xs text-[#8BA0B8]">
+                <p
+                  className="max-w-[160px] truncate text-[11px]"
+                  style={subtleText}
+                >
                   {email}
                 </p>
               </div>
@@ -266,193 +394,261 @@ export default function DashboardShell({
         </header>
 
         {/* Page content */}
-        <div className="mx-auto max-w-[1500px] p-5 sm:p-8">
+        <div className="mx-auto max-w-[1500px] p-6 sm:p-10">
+
+          {/* Overview */}
           {activePage === "Overview" ? (
-            <>
-              {/* Welcome section */}
-              <div className="relative mb-10 overflow-hidden rounded-[28px] bg-gradient-to-br from-[#DCEBFF] via-[#EAF4FF] to-[#EAE5FF] p-7 sm:p-10">
-                <div className="pointer-events-none absolute -right-12 -top-20 h-64 w-64 rounded-full bg-white/40 blur-3xl" />
+            <div className="space-y-9">
 
-                <div className="pointer-events-none absolute -bottom-24 right-1/4 h-48 w-48 rounded-full bg-purple-200/40 blur-3xl" />
+              {/* Welcome heading */}
+              <section className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+                <div>
+                  <p
+                    className="mb-2 text-xs font-semibold tracking-wide"
+                    style={{ color: "var(--primary)" }}
+                  >
+                    CLINIC OVERVIEW
+                  </p>
 
-                <div className="relative z-10 flex flex-col justify-between gap-8 sm:flex-row sm:items-end">
-                  <div>
-                    <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/60 px-4 py-2 text-xs font-semibold text-blue-800">
-                      <span className="h-2 w-2 rounded-full bg-teal-500" />
-                      YOUR CLINIC SPACE
-                    </div>
+                  <h2 className="text-2xl font-semibold tracking-tight sm:text-[28px]">
+                    Good to see you, {fullName?.split(" ")[0] || "there"}.
+                  </h2>
 
-                    <h2 className="max-w-xl text-3xl font-bold leading-tight tracking-tight text-[#16345C] sm:text-4xl">
-                      A better day starts
-                      <br />
-                      with better care.
-                    </h2>
-
-                    <p className="mt-4 max-w-md text-sm leading-7 text-[#58718F]">
-                      Welcome back, {fullName?.split(" ")[0] || "there"} 👋
-                    </p>
-                  </div>
-
-                  <div className="w-fit rounded-2xl border border-white/70 bg-white/65 px-5 py-4 backdrop-blur-md">
-                    <p className="text-xs font-semibold tracking-wider text-[#7890AC]">
-                      TODAY
-                    </p>
-
-                    <p className="mt-1 text-lg font-bold text-[#16345C]">
-                      {new Date().toLocaleDateString("en-IN", {
-                        weekday: "long",
-                      })}
-                    </p>
-
-                    <p className="text-sm text-[#58718F]">
-                      {new Date().toLocaleDateString("en-IN", {
-                        day: "numeric",
-                        month: "long",
-                        year: "numeric",
-                      })}
-                    </p>
-                  </div>
+                  <p
+                    className="mt-2 text-sm"
+                    style={mutedText}
+                  >
+                    Here's what's happening in your clinic today.
+                  </p>
                 </div>
-              </div>
+
+                <div
+                  className="w-fit rounded-xl px-4 py-3"
+                  style={{
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
+                  }}
+                >
+                  <p
+                    className="text-[10px] font-semibold tracking-wider"
+                    style={subtleText}
+                  >
+                    TODAY
+                  </p>
+                  <p className="mt-1 text-sm font-semibold">
+                    {new Date().toLocaleDateString("en-IN", {
+                      weekday: "long",
+                    })}
+                  </p>
+                  <p className="text-xs" style={mutedText}>
+                    {new Date().toLocaleDateString("en-IN", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </p>
+                </div>
+              </section>
+
 
               {/* Statistics */}
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
-                {stats.map((stat) => (
-                  <div
-                    key={stat.title}
-                    className="rounded-2xl border border-[#E1ECF8] bg-white p-7 shadow-[0_8px_30px_rgba(40,80,130,0.035)]"
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-[#7890AC]">
-                        {stat.title}
-                      </p>
+              <section>
+                <div className="mb-4">
+                  <h3 className="text-[15px] font-semibold">
+                    Clinic at a glance
+                  </h3>
+                  <p className="mt-1 text-xs" style={subtleText}>
+                    An overview of your clinic records.
+                  </p>
+                </div>
 
-                      <span
-                        className={`flex h-10 w-10 items-center justify-center rounded-xl text-lg ${stat.color === "blue"
-                          ? "bg-blue-50 text-blue-600"
-                          : stat.color === "teal"
-                            ? "bg-teal-50 text-teal-600"
-                            : stat.color === "purple"
-                              ? "bg-purple-50 text-purple-600"
-                              : "bg-amber-50 text-amber-600"
-                          }`}
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+                  {stats.map((stat) => {
+                    const colors = statColors[stat.color];
+
+                    return (
+                      <div
+                        key={stat.title}
+                        className="min-w-0 p-6 sm:p-7"
+                        style={cardStyle}
                       >
-                        {stat.symbol}
-                      </span>
-                    </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <p
+                            className="text-[13px] font-medium"
+                            style={mutedText}
+                          >
+                            {stat.title}
+                          </p>
 
-                    <h3 className="mt-6 text-3xl font-bold tracking-tight">
-                      {stat.value}
-                    </h3>
+                          <span
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg"
+                            style={{
+                              background: colors.background,
+                              color: colors.color,
+                            }}
+                          >
+                            {stat.symbol}
+                          </span>
+                        </div>
 
-                    <p className="mt-2 text-xs text-[#9AAEC4]">
-                      {stat.note}
-                    </p>
-                  </div>
-                ))}
-              </div>
+                        <h3
+                          className="mt-5 text-[30px] font-semibold tracking-tight"
+                          style={{ fontVariantNumeric: "tabular-nums" }}
+                        >
+                          {stat.value}
+                        </h3>
 
-              {/* Appointment shortcut and workspace */}
-              <div className="mt-12 grid grid-cols-1 gap-8 xl:grid-cols-3">
-                <section className="rounded-[24px] border border-[#E1ECF8] bg-white p-7 xl:col-span-2">
-                  <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
+                        <p
+                          className="mt-1 text-xs"
+                          style={subtleText}
+                        >
+                          {stat.note}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+
+              {/* Workspace sections */}
+              <section className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+
+                {/* Appointments shortcut */}
+                <div
+                  className="p-6 sm:p-7 xl:col-span-2"
+                  style={cardStyle}
+                >
+                  <div className="flex items-start justify-between gap-4">
                     <div>
-                      <p className="text-sm font-semibold text-teal-600">
+                      <p
+                        className="text-xs font-semibold tracking-wide"
+                        style={{ color: "var(--sage)" }}
+                      >
                         CLINIC SCHEDULING
                       </p>
 
-                      <h3 className="mt-2 text-xl font-bold">
+                      <h3 className="mt-2 text-lg font-semibold">
                         Keep every visit on track.
                       </h3>
 
-                      <p className="mt-2 max-w-md text-sm leading-6 text-[#8BA0B8]">
+                      <p
+                        className="mt-2 max-w-md text-sm leading-6"
+                        style={mutedText}
+                      >
                         {role === "demo"
                           ? "Explore the clinic schedule and view sample patient appointments."
                           : "Book appointments, find patient visits and update appointment statuses from your clinic schedule."}
                       </p>
                     </div>
 
-                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-2xl text-teal-600">
+                    <span
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xl"
+                      style={{
+                        background: "var(--info-soft)",
+                        color: "var(--primary)",
+                      }}
+                    >
                       ▦
                     </span>
                   </div>
 
-                  <div className="mt-8 flex flex-wrap items-center gap-3">
+                  <div className="mt-7 flex flex-wrap gap-3">
                     <button
                       onClick={() => setActivePage("Appointments")}
-                      className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+                      className="rounded-lg px-5 py-2.5 text-xs font-semibold transition-opacity hover:opacity-90"
+                      style={{
+                        background: "var(--primary)",
+                        color: "var(--primary-foreground)",
+                      }}
                     >
-                      {role === "demo" ? "Explore appointments" : "Manage appointments"}
+                      {role === "demo"
+                        ? "Explore appointments"
+                        : "Manage appointments"}
                     </button>
 
                     <button
                       onClick={() => setActivePage("Doctors")}
-                      className="rounded-xl border border-[#E1ECF8] px-5 py-3 text-sm font-semibold text-[#58718F] transition hover:bg-[#F4F8FD]"
+                      className="rounded-lg px-5 py-2.5 text-xs font-semibold transition-colors"
+                      style={{
+                        background: "var(--surface)",
+                        border: "1px solid var(--border-strong)",
+                        color: "var(--foreground)",
+                      }}
                     >
                       View doctors
                     </button>
                   </div>
-                </section>
+                </div>
 
-                <section className="rounded-[24px] border border-[#E1ECF8] bg-white p-7">
-                  <h3 className="text-lg font-bold">Your workspace</h3>
+                {/* Workspace summary */}
+                <div className="p-6 sm:p-7" style={cardStyle}>
+                  <h3 className="text-[15px] font-semibold">
+                    Your workspace
+                  </h3>
 
-                  <p className="mt-2 text-sm text-[#8BA0B8]">
+                  <p
+                    className="mt-1 text-xs leading-5"
+                    style={mutedText}
+                  >
                     Everything your clinic needs, in one place.
                   </p>
 
-                  <div className="mt-8 space-y-6">
-                    <div className="flex items-center gap-4">
-                      <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                        ♙
-                      </span>
+                  <div className="mt-6 space-y-5">
+                    {[
+                      {
+                        symbol: "♙",
+                        title: "Patient management",
+                        description: "Organize patient records",
+                        color: "var(--primary)",
+                        background: "var(--primary-soft)",
+                      },
+                      {
+                        symbol: "▦",
+                        title: "Appointment planning",
+                        description: "Manage clinic schedules",
+                        color: "var(--sage)",
+                        background: "var(--success-soft)",
+                      },
+                      {
+                        symbol: "₹",
+                        title: "Billing management",
+                        description: "Track clinic payments",
+                        color: "var(--warning)",
+                        background: "var(--warning-soft)",
+                      },
+                    ].map((item) => (
+                      <div
+                        key={item.title}
+                        className="flex items-center gap-3"
+                      >
+                        <span
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-base"
+                          style={{
+                            color: item.color,
+                            background: item.background,
+                          }}
+                        >
+                          {item.symbol}
+                        </span>
 
-                      <div>
-                        <p className="text-sm font-semibold">
-                          Patient management
-                        </p>
-
-                        <p className="mt-1 text-xs text-[#8BA0B8]">
-                          Organize patient records
-                        </p>
+                        <div>
+                          <p className="text-xs font-semibold">
+                            {item.title}
+                          </p>
+                          <p
+                            className="mt-1 text-[11px]"
+                            style={subtleText}
+                          >
+                            {item.description}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                      <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-50 text-teal-600">
-                        ▦
-                      </span>
-
-                      <div>
-                        <p className="text-sm font-semibold">
-                          Appointment planning
-                        </p>
-
-                        <p className="mt-1 text-xs text-[#8BA0B8]">
-                          Manage clinic schedules
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                      <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
-                        ₹
-                      </span>
-
-                      <div>
-                        <p className="text-sm font-semibold">
-                          Billing management
-                        </p>
-
-                        <p className="mt-1 text-xs text-[#8BA0B8]">
-                          Track clinic payments
-                        </p>
-                      </div>
-                    </div>
+                    ))}
                   </div>
-                </section>
-              </div>
-            </>
+                </div>
+              </section>
+            </div>
+
           ) : activePage === "Patients" ? (
             <PatientsPanel
               initialPatients={patients}
@@ -460,17 +656,23 @@ export default function DashboardShell({
               userId={userId}
               isReadOnly={role === "demo"}
             />
+
           ) : activePage === "Doctors" ? (
             <DoctorsPanel isReadOnly={role === "demo"} />
+
           ) : activePage === "Appointments" ? (
             <AppointmentsPanel isReadOnly={role === "demo"} />
+
           ) : activePage === "Billing" ? (
             <BillingPanel />
+
           ) : activePage === "Staff" && role === "admin" ? (
             <StaffPanel />
+
           ) : activePage === "Reports" &&
             (role === "admin" || (role === "demo" && previewRole === "admin")) ? (
             <ReportsPanel />
+
           ) : activePage === "Settings" &&
             (role === "admin" || (role === "demo" && previewRole === "admin")) ? (
             <SettingsPanel
@@ -481,23 +683,41 @@ export default function DashboardShell({
               clinicName={clinicName}
               isReadOnly={role === "demo"}
             />
-          ) : (
 
-            <div className="flex min-h-[420px] flex-col items-center justify-center rounded-[24px] border border-[#E1ECF8] bg-white p-8 text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-2xl text-blue-600">
+          ) : (
+            <div
+              className="flex min-h-[420px] flex-col items-center justify-center p-8 text-center"
+              style={cardStyle}
+            >
+              <div
+                className="flex h-16 w-16 items-center justify-center rounded-2xl text-2xl"
+                style={{
+                  background: "var(--primary-soft)",
+                  color: "var(--primary)",
+                }}
+              >
                 ✦
               </div>
 
-              <h2 className="mt-5 text-2xl font-bold">{activePage}</h2>
+              <h2 className="mt-5 text-xl font-semibold">
+                {activePage}
+              </h2>
 
-              <p className="mt-2 max-w-sm text-sm leading-6 text-[#7890AC]">
-                This module is coming soon. We&apos;ll connect it to your clinic
+              <p
+                className="mt-2 max-w-sm text-sm leading-6"
+                style={mutedText}
+              >
+                This module is coming soon. We'll connect it to your clinic
                 database.
               </p>
 
               <button
                 onClick={() => setActivePage("Overview")}
-                className="mt-6 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white"
+                className="mt-6 rounded-lg px-5 py-2.5 text-xs font-semibold"
+                style={{
+                  background: "var(--primary)",
+                  color: "var(--primary-foreground)",
+                }}
               >
                 Back to overview
               </button>
