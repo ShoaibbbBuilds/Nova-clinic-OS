@@ -174,8 +174,8 @@ export async function POST(request) {
 
     const doctorId =
       body.doctorId === null ||
-      body.doctorId === undefined ||
-      body.doctorId === ""
+        body.doctorId === undefined ||
+        body.doctorId === ""
         ? null
         : body.doctorId;
 

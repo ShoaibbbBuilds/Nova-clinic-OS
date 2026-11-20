@@ -1,5 +1,6 @@
 
 "use client";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -18,10 +19,10 @@ const STATUS_LABELS = {
 };
 
 const STATUS_STYLES = {
-    unpaid: "bg-amber-50 text-amber-700",
-    partially_paid: "bg-blue-50 text-blue-700",
-    paid: "bg-teal-50 text-teal-700",
-    cancelled: "bg-red-50 text-red-700",
+    unpaid: "border-[var(--warning)] bg-[var(--warning-soft)] text-[var(--warning)]",
+    partially_paid: "border-[var(--info)] bg-[var(--info-soft)] text-[var(--info)]",
+    paid: "border-[var(--success)] bg-[var(--success-soft)] text-[var(--success)]",
+    cancelled: "border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--text-muted)]",
 };
 
 const emptyInvoiceForm = {
@@ -33,6 +34,21 @@ const emptyPaymentForm = {
     amount: "",
     payment_method: "upi",
 };
+
+const inputClass =
+    "w-full rounded-[var(--control-radius)] border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition placeholder:text-[var(--text-muted)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary-soft)] disabled:cursor-not-allowed disabled:bg-[var(--surface-subtle)] disabled:opacity-70";
+
+const labelClass =
+    "mb-2 block text-sm font-medium text-[var(--foreground)]";
+
+const cardClass =
+    "rounded-[var(--card-radius)] border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6";
+
+const primaryButtonClass =
+    "inline-flex items-center justify-center gap-2 rounded-[var(--control-radius)] bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-[var(--primary-foreground)] transition hover:bg-[var(--primary-hover)] disabled:cursor-not-allowed disabled:opacity-50";
+
+const secondaryButtonClass =
+    "inline-flex items-center justify-center gap-2 rounded-[var(--control-radius)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm font-medium text-[var(--foreground)] transition hover:bg-[var(--surface-hover)]";
 
 function money(value) {
     return `₹${Number(value || 0).toLocaleString("en-IN", {
@@ -89,6 +105,91 @@ function newLineItem() {
         quantity: "1",
         unit_price: "",
     };
+}
+
+function SectionHeading({ eyebrow, title, description }) {
+    return (
+        <div>
+            {eyebrow && (
+                <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                    {eyebrow}
+                </p>
+            )}
+            <h2 className="text-lg font-semibold tracking-tight text-[var(--foreground)]">
+                {title}
+            </h2>
+            {description && (
+                <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
+                    {description}
+                </p>
+            )}
+        </div>
+    );
+}
+
+function StatusBadge({ status }) {
+    return (
+        <span
+            className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${STATUS_STYLES[status] || STATUS_STYLES.cancelled
+                }`}
+        >
+            {STATUS_LABELS[status] || status}
+        </span>
+    );
+}
+
+function FeedbackMessage({ type, children }) {
+    if (!children) return null;
+
+    const styles =
+        type === "success"
+            ? "border-[var(--success)] bg-[var(--success-soft)] text-[var(--success)]"
+            : "border-[var(--danger)] bg-[var(--danger-soft)] text-[var(--danger)]";
+
+    return (
+        <div
+            role="status"
+            className={`rounded-[var(--control-radius)] border px-4 py-3 text-sm ${styles}`}
+        >
+            {children}
+        </div>
+    );
+}
+
+function SummaryCard({ label, value, detail, tone = "default" }) {
+    const toneStyles = {
+        default: "bg-[var(--surface)]",
+        primary: "bg-[var(--primary-soft)]",
+        success: "bg-[var(--success-soft)]",
+        warning: "bg-[var(--warning-soft)]",
+    };
+
+    const valueStyles = {
+        default: "text-[var(--foreground)]",
+        primary: "text-[var(--primary)]",
+        success: "text-[var(--success)]",
+        warning: "text-[var(--warning)]",
+    };
+
+    return (
+        <div
+            className={`rounded-[var(--card-radius)] border border-[var(--border)] p-5 ${toneStyles[tone]}`}
+        >
+            <p className="text-sm font-medium text-[var(--text-secondary)]">
+                {label}
+            </p>
+            <p
+                className={`mt-3 text-[clamp(1.4rem,2vw,1.9rem)] font-semibold tracking-tight ${valueStyles[tone]}`}
+            >
+                {value}
+            </p>
+            {detail && (
+                <p className="mt-1.5 text-xs text-[var(--text-muted)]">
+                    {detail}
+                </p>
+            )}
+        </div>
+    );
 }
 
 export default function BillingPanel() {
@@ -218,7 +319,6 @@ export default function BillingPanel() {
         setLoading(false);
     }, [supabase]);
 
-
     useEffect(() => {
         const timer = setTimeout(() => {
             void loadBilling();
@@ -226,7 +326,6 @@ export default function BillingPanel() {
 
         return () => clearTimeout(timer);
     }, [loadBilling]);
-
 
     const selectedInvoice = invoices.find(
         (invoice) => invoice.id === selectedInvoiceId
@@ -477,7 +576,6 @@ export default function BillingPanel() {
             );
 
         if (itemsError) {
-            // Remove the empty invoice if its line items could not be saved.
             await supabase
                 .from("invoices")
                 .delete()
@@ -667,19 +765,17 @@ export default function BillingPanel() {
 
     return (
         <div className="space-y-7">
-            {/* Header */}
-            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+            {/* Page heading */}
+            <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
                 <div>
-                    <p className="text-sm font-medium text-blue-600">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--primary)]">
                         Financial management
                     </p>
-
-                    <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-900">
+                    <h1 className="text-[28px] font-semibold tracking-tight text-[var(--foreground)] sm:text-[32px]">
                         Billing & payments
                     </h1>
-
-                    <p className="mt-2 text-sm text-slate-500">
-                        Create invoices, record payments and track outstanding balances.
+                    <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--text-secondary)]">
+                        Manage invoices, record payments and keep track of outstanding balances.
                     </p>
                 </div>
 
@@ -687,95 +783,87 @@ export default function BillingPanel() {
                     <button
                         onClick={openInvoiceForm}
                         disabled={loading || patients.length === 0}
-                        className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        className={primaryButtonClass}
                     >
-                        + Create invoice
+                        <span className="text-lg leading-none">+</span>
+                        Create invoice
                     </button>
                 )}
             </div>
 
             {/* Feedback */}
-            {error && (
-                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    {error}
-                </div>
-            )}
-
-            {success && (
-                <div className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-700">
-                    {success}
-                </div>
-            )}
-
-            {/* Summary cards */}
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-5">
-                    <p className="text-sm text-blue-700">Total invoices</p>
-                    <p className="mt-2 text-3xl font-semibold text-slate-900">
-                        {invoices.length}
-                    </p>
-                </div>
-
-                <div className="rounded-2xl border border-purple-100 bg-purple-50/70 p-5">
-                    <p className="text-sm text-purple-700">Total billed</p>
-                    <p className="mt-2 text-2xl font-semibold text-slate-900">
-                        {money(totalBilled)}
-                    </p>
-                </div>
-
-                <div className="rounded-2xl border border-teal-100 bg-teal-50/70 p-5">
-                    <p className="text-sm text-teal-700">Collected</p>
-                    <p className="mt-2 text-2xl font-semibold text-slate-900">
-                        {money(totalCollected)}
-                    </p>
-                </div>
-
-                <div className="rounded-2xl border border-amber-100 bg-amber-50/70 p-5">
-                    <p className="text-sm text-amber-700">Outstanding</p>
-                    <p className="mt-2 text-2xl font-semibold text-slate-900">
-                        {money(totalOutstanding)}
-                    </p>
-                </div>
+            <div className="space-y-3">
+                <FeedbackMessage type="error">{error}</FeedbackMessage>
+                <FeedbackMessage type="success">{success}</FeedbackMessage>
             </div>
+
+            {/* Financial overview */}
+            <section>
+                <div className="mb-4">
+                    <SectionHeading
+                        eyebrow="Overview"
+                        title="Financial summary"
+                        description="A snapshot of your clinic's billing activity."
+                    />
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    <SummaryCard
+                        label="Total invoices"
+                        value={invoices.length.toLocaleString("en-IN")}
+                        detail="All invoice records"
+                    />
+                    <SummaryCard
+                        label="Total billed"
+                        value={money(totalBilled)}
+                        detail="Excluding cancelled invoices"
+                        tone="primary"
+                    />
+                    <SummaryCard
+                        label="Collected"
+                        value={money(totalCollected)}
+                        detail="Payments recorded"
+                        tone="success"
+                    />
+                    <SummaryCard
+                        label="Outstanding"
+                        value={money(totalOutstanding)}
+                        detail="Remaining amount due"
+                        tone="warning"
+                    />
+                </div>
+            </section>
 
             {/* Invoice creation */}
             {showInvoiceForm && (
-                <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-                    <div className="mb-6 flex items-start justify-between gap-4">
-                        <div>
-                            <h2 className="text-xl font-semibold text-slate-900">
-                                Create invoice
-                            </h2>
-                            <p className="mt-1 text-sm text-slate-500">
-                                Add a patient and the services or charges being billed.
-                            </p>
-                        </div>
-
+                <section className={`${cardClass} space-y-6`}>
+                    <div className="flex items-start justify-between gap-4">
+                        <SectionHeading
+                            eyebrow="New billing record"
+                            title="Create invoice"
+                            description="Choose a patient and add the services or charges being billed."
+                        />
                         <button
                             type="button"
                             onClick={() => setShowInvoiceForm(false)}
-                            className="rounded-lg px-3 py-2 text-sm text-slate-500 hover:bg-slate-100"
+                            className={secondaryButtonClass}
                         >
                             Close
                         </button>
                     </div>
 
-                    <form onSubmit={createInvoice} className="space-y-6">
+                    <form onSubmit={createInvoice} className="space-y-7">
                         <div className="grid gap-5 sm:grid-cols-2">
                             <div>
-                                <label className="mb-2 block text-sm font-medium text-slate-700">
-                                    Patient *
-                                </label>
-
+                                <label className={labelClass}>Patient *</label>
                                 <select
                                     required
                                     name="patient_id"
                                     value={invoiceForm.patient_id}
                                     onChange={updateInvoiceForm}
-                                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                    className={inputClass}
                                 >
                                     <option value="">Select patient</option>
-
                                     {patients.map((patient) => (
                                         <option key={patient.id} value={patient.id}>
                                             {patient.full_name}
@@ -788,19 +876,17 @@ export default function BillingPanel() {
                             </div>
 
                             <div>
-                                <label className="mb-2 block text-sm font-medium text-slate-700">
+                                <label className={labelClass}>
                                     Link appointment
                                 </label>
-
                                 <select
                                     name="appointment_id"
                                     value={invoiceForm.appointment_id}
                                     onChange={updateInvoiceForm}
                                     disabled={!invoiceForm.patient_id}
-                                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 disabled:bg-slate-50"
+                                    className={inputClass}
                                 >
                                     <option value="">No appointment linked</option>
-
                                     {patientAppointments.map((appointment) => (
                                         <option key={appointment.id} value={appointment.id}>
                                             {formatDateTime(appointment.appointment_at)}
@@ -812,24 +898,19 @@ export default function BillingPanel() {
                             </div>
                         </div>
 
-                        {/* Line items */}
-                        <div className="border-t border-slate-100 pt-6">
-                            <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-                                <div>
-                                    <h3 className="font-semibold text-slate-900">
-                                        Invoice items
-                                    </h3>
-                                    <p className="mt-1 text-sm text-slate-500">
-                                        Add consultation fees, procedures, medicines or other charges.
-                                    </p>
-                                </div>
-
+                        <div className="border-t border-[var(--border)] pt-6">
+                            <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                                <SectionHeading
+                                    title="Invoice items"
+                                    description="Add consultation fees, procedures, medicines or other charges."
+                                />
                                 <button
                                     type="button"
                                     onClick={addLineItem}
-                                    className="w-fit rounded-xl border border-blue-200 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50"
+                                    className={secondaryButtonClass}
                                 >
-                                    + Add item
+                                    <span className="text-base leading-none">+</span>
+                                    Add item
                                 </button>
                             </div>
 
@@ -837,13 +918,12 @@ export default function BillingPanel() {
                                 {lineItems.map((item, index) => (
                                     <div
                                         key={item.id}
-                                        className="grid gap-3 rounded-xl border border-slate-200 p-4 sm:grid-cols-[minmax(0,2fr)_110px_140px_40px] sm:items-end"
+                                        className="grid gap-4 rounded-[var(--control-radius)] border border-[var(--border)] bg-[var(--surface-subtle)] p-4 sm:grid-cols-[minmax(0,2fr)_110px_140px_40px] sm:items-end"
                                     >
                                         <div>
-                                            <label className="mb-2 block text-xs font-medium text-slate-600">
+                                            <label className={labelClass}>
                                                 Description {index + 1}
                                             </label>
-
                                             <input
                                                 required
                                                 value={item.description}
@@ -855,15 +935,12 @@ export default function BillingPanel() {
                                                     )
                                                 }
                                                 placeholder="e.g. General consultation"
-                                                className="w-full rounded-lg border border-slate-200 px-3 py-3 text-sm outline-none focus:border-blue-500"
+                                                className={inputClass}
                                             />
                                         </div>
 
                                         <div>
-                                            <label className="mb-2 block text-xs font-medium text-slate-600">
-                                                Quantity
-                                            </label>
-
+                                            <label className={labelClass}>Quantity</label>
                                             <input
                                                 required
                                                 type="number"
@@ -877,15 +954,14 @@ export default function BillingPanel() {
                                                         event.target.value
                                                     )
                                                 }
-                                                className="w-full rounded-lg border border-slate-200 px-3 py-3 text-sm outline-none focus:border-blue-500"
+                                                className={inputClass}
                                             />
                                         </div>
 
                                         <div>
-                                            <label className="mb-2 block text-xs font-medium text-slate-600">
+                                            <label className={labelClass}>
                                                 Unit price (₹)
                                             </label>
-
                                             <input
                                                 required
                                                 type="number"
@@ -900,7 +976,7 @@ export default function BillingPanel() {
                                                     )
                                                 }
                                                 placeholder="0.00"
-                                                className="w-full rounded-lg border border-slate-200 px-3 py-3 text-sm outline-none focus:border-blue-500"
+                                                className={inputClass}
                                             />
                                         </div>
 
@@ -909,7 +985,7 @@ export default function BillingPanel() {
                                             onClick={() => removeLineItem(item.id)}
                                             disabled={lineItems.length === 1}
                                             aria-label={`Remove item ${index + 1}`}
-                                            className="h-10 rounded-lg text-lg text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-30"
+                                            className="flex h-11 items-center justify-center rounded-[var(--control-radius)] text-xl text-[var(--danger)] transition hover:bg-[var(--danger-soft)] disabled:cursor-not-allowed disabled:opacity-30"
                                         >
                                             ×
                                         </button>
@@ -917,30 +993,33 @@ export default function BillingPanel() {
                                 ))}
                             </div>
 
-                            <div className="mt-5 flex flex-col items-end border-t border-slate-100 pt-5">
-                                <p className="text-sm text-slate-500">Estimated total</p>
-                                <p className="mt-1 text-3xl font-semibold text-slate-900">
-                                    {money(invoicePreviewTotal)}
-                                </p>
-                                <p className="mt-1 text-xs text-slate-400">
-                                    Final total is calculated and stored by the database.
-                                </p>
+                            <div className="mt-5 flex justify-end">
+                                <div className="w-full rounded-[var(--control-radius)] bg-[var(--surface-subtle)] p-5 sm:max-w-xs">
+                                    <p className="text-sm text-[var(--text-secondary)]">
+                                        Estimated total
+                                    </p>
+                                    <p className="mt-1 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+                                        {money(invoicePreviewTotal)}
+                                    </p>
+                                    <p className="mt-2 text-xs leading-5 text-[var(--text-muted)]">
+                                        Final total is calculated and stored by the database.
+                                    </p>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="flex flex-wrap gap-3 border-t border-slate-100 pt-5">
+                        <div className="flex flex-wrap gap-3 border-t border-[var(--border)] pt-5">
                             <button
                                 type="submit"
                                 disabled={savingInvoice || !canManage}
-                                className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
+                                className={primaryButtonClass}
                             >
                                 {savingInvoice ? "Creating invoice..." : "Create invoice"}
                             </button>
-
                             <button
                                 type="button"
                                 onClick={() => setShowInvoiceForm(false)}
-                                className="rounded-xl border border-slate-200 px-6 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                                className={secondaryButtonClass}
                             >
                                 Cancel
                             </button>
@@ -951,38 +1030,37 @@ export default function BillingPanel() {
 
             {/* Payment form */}
             {showPaymentForm && selectedInvoice && (
-                <section className="rounded-2xl border border-teal-200 bg-white p-5 shadow-sm sm:p-7">
-                    <div className="mb-6 flex items-start justify-between gap-4">
+                <section className={`${cardClass} space-y-6`}>
+                    <div className="flex items-start justify-between gap-4">
                         <div>
-                            <p className="text-sm font-medium text-teal-700">
+                            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--success)]">
                                 Record payment
                             </p>
-
-                            <h2 className="mt-1 text-xl font-semibold text-slate-900">
+                            <h2 className="text-xl font-semibold tracking-tight text-[var(--foreground)]">
                                 {selectedInvoice.invoice_number}
                             </h2>
-
-                            <p className="mt-1 text-sm text-slate-500">
-                                Remaining balance: {money(remainingBalance)}
+                            <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                                Remaining balance:{" "}
+                                <span className="font-semibold text-[var(--foreground)]">
+                                    {money(remainingBalance)}
+                                </span>
                             </p>
                         </div>
-
                         <button
                             type="button"
                             onClick={() => setShowPaymentForm(false)}
-                            className="rounded-lg px-3 py-2 text-sm text-slate-500 hover:bg-slate-100"
+                            className={secondaryButtonClass}
                         >
                             Close
                         </button>
                     </div>
 
-                    <form onSubmit={recordPayment} className="space-y-5">
+                    <form onSubmit={recordPayment} className="space-y-6">
                         <div className="grid gap-5 sm:grid-cols-2">
                             <div>
-                                <label className="mb-2 block text-sm font-medium text-slate-700">
+                                <label className={labelClass}>
                                     Amount received (₹) *
                                 </label>
-
                                 <input
                                     required
                                     type="number"
@@ -997,15 +1075,14 @@ export default function BillingPanel() {
                                         }))
                                     }
                                     placeholder="Enter amount"
-                                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-teal-500"
+                                    className={inputClass}
                                 />
                             </div>
 
                             <div>
-                                <label className="mb-2 block text-sm font-medium text-slate-700">
+                                <label className={labelClass}>
                                     Payment method *
                                 </label>
-
                                 <select
                                     required
                                     value={paymentForm.payment_method}
@@ -1015,7 +1092,7 @@ export default function BillingPanel() {
                                             payment_method: event.target.value,
                                         }))
                                     }
-                                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-teal-500"
+                                    className={inputClass}
                                 >
                                     {PAYMENT_METHODS.map((method) => (
                                         <option key={method.value} value={method.value}>
@@ -1026,19 +1103,18 @@ export default function BillingPanel() {
                             </div>
                         </div>
 
-                        <div className="flex flex-wrap gap-3 border-t border-slate-100 pt-5">
+                        <div className="flex flex-wrap gap-3 border-t border-[var(--border)] pt-5">
                             <button
                                 type="submit"
                                 disabled={savingPayment || remainingBalance <= 0}
-                                className="rounded-xl bg-teal-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-teal-700 disabled:opacity-60"
+                                className={primaryButtonClass}
                             >
                                 {savingPayment ? "Recording..." : "Record payment"}
                             </button>
-
                             <button
                                 type="button"
                                 onClick={() => setShowPaymentForm(false)}
-                                className="rounded-xl border border-slate-200 px-6 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                                className={secondaryButtonClass}
                             >
                                 Cancel
                             </button>
@@ -1047,30 +1123,28 @@ export default function BillingPanel() {
                 </section>
             )}
 
-            {/* Invoice list */}
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-                <div className="mb-5 flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
-                    <div>
-                        <h2 className="text-lg font-semibold text-slate-900">
-                            Invoice register
-                        </h2>
-                        <p className="mt-1 text-sm text-slate-500">
-                            {filteredInvoices.length} invoices found
-                        </p>
-                    </div>
+            {/* Invoice register */}
+            <section className={cardClass}>
+                <div className="mb-5 flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
+                    <SectionHeading
+                        eyebrow="Billing records"
+                        title="Invoice register"
+                        description={`${filteredInvoices.length} invoices found`}
+                    />
 
-                    <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="grid gap-3 sm:grid-cols-2 xl:min-w-[460px]">
                         <input
                             value={search}
                             onChange={(event) => setSearch(event.target.value)}
                             placeholder="Search invoice or patient..."
-                            className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500"
+                            aria-label="Search invoices"
+                            className={inputClass}
                         />
-
                         <select
                             value={statusFilter}
                             onChange={(event) => setStatusFilter(event.target.value)}
-                            className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500"
+                            aria-label="Filter invoices by status"
+                            className={inputClass}
                         >
                             <option value="all">All statuses</option>
                             <option value="unpaid">Unpaid</option>
@@ -1082,23 +1156,26 @@ export default function BillingPanel() {
                 </div>
 
                 {loading ? (
-                    <div className="py-12 text-center text-sm text-slate-500">
-                        Loading billing records...
+                    <div className="py-14 text-center">
+                        <p className="text-sm text-[var(--text-secondary)]">
+                            Loading billing records...
+                        </p>
                     </div>
                 ) : filteredInvoices.length === 0 ? (
-                    <div className="rounded-xl bg-slate-50 px-5 py-12 text-center">
-                        <div className="text-3xl">₹</div>
-                        <h3 className="mt-3 font-semibold text-slate-800">
+                    <div className="rounded-[var(--control-radius)] border border-dashed border-[var(--border-strong)] bg-[var(--surface-subtle)] px-5 py-12 text-center">
+                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[var(--surface)] text-xl font-semibold text-[var(--text-muted)]">
+                            ₹
+                        </div>
+                        <h3 className="mt-4 font-semibold text-[var(--foreground)]">
                             No invoices found
                         </h3>
-                        <p className="mt-1 text-sm text-slate-500">
+                        <p className="mx-auto mt-1 max-w-sm text-sm leading-6 text-[var(--text-secondary)]">
                             Create an invoice to start tracking clinic billing.
                         </p>
-
                         {canManage && patients.length > 0 && (
                             <button
                                 onClick={openInvoiceForm}
-                                className="mt-4 text-sm font-semibold text-blue-600 hover:text-blue-700"
+                                className="mt-4 text-sm font-semibold text-[var(--primary)] transition hover:opacity-80"
                             >
                                 + Create first invoice
                             </button>
@@ -1108,17 +1185,16 @@ export default function BillingPanel() {
                     <div className="overflow-x-auto">
                         <table className="w-full min-w-[760px] text-left">
                             <thead>
-                                <tr className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
-                                    <th className="px-3 py-4 font-medium">Invoice</th>
-                                    <th className="px-3 py-4 font-medium">Patient</th>
-                                    <th className="px-3 py-4 font-medium">Date</th>
-                                    <th className="px-3 py-4 font-medium">Total</th>
-                                    <th className="px-3 py-4 font-medium">Balance</th>
-                                    <th className="px-3 py-4 font-medium">Status</th>
-                                    <th className="px-3 py-4 text-right font-medium">Action</th>
+                                <tr className="border-b border-[var(--border)] text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">
+                                    <th className="px-3 py-4">Invoice</th>
+                                    <th className="px-3 py-4">Patient</th>
+                                    <th className="px-3 py-4">Date</th>
+                                    <th className="px-3 py-4">Total</th>
+                                    <th className="px-3 py-4">Balance</th>
+                                    <th className="px-3 py-4">Status</th>
+                                    <th className="px-3 py-4 text-right">Action</th>
                                 </tr>
                             </thead>
-
                             <tbody>
                                 {filteredInvoices.map((invoice) => {
                                     const patient = patients.find(
@@ -1142,54 +1218,44 @@ export default function BillingPanel() {
                                     return (
                                         <tr
                                             key={invoice.id}
-                                            className={`border-b border-slate-50 last:border-0 ${isSelected ? "bg-blue-50/50" : "hover:bg-slate-50/70"
+                                            className={`border-b border-[var(--border)] last:border-0 transition ${isSelected
+                                                ? "bg-[var(--primary-soft)]"
+                                                : "hover:bg-[var(--surface-hover)]"
                                                 }`}
                                         >
                                             <td className="px-3 py-4">
-                                                <p className="font-semibold text-slate-800">
+                                                <p className="text-sm font-semibold text-[var(--foreground)]">
                                                     {invoice.invoice_number}
                                                 </p>
-                                                <p className="mt-1 text-xs text-slate-400">
+                                                <p className="mt-1 text-xs text-[var(--text-muted)]">
                                                     {items.filter(
                                                         (item) => item.invoice_id === invoice.id
                                                     ).length}{" "}
                                                     items
                                                 </p>
                                             </td>
-
                                             <td className="px-3 py-4">
-                                                <p className="text-sm font-medium text-slate-800">
+                                                <p className="text-sm font-medium text-[var(--foreground)]">
                                                     {patient?.full_name || "Unknown patient"}
                                                 </p>
-                                                <p className="mt-1 text-xs text-slate-400">
+                                                <p className="mt-1 text-xs text-[var(--text-muted)]">
                                                     {patient?.patient_code || patient?.phone || "—"}
                                                 </p>
                                             </td>
-
-                                            <td className="px-3 py-4 text-sm text-slate-600">
+                                            <td className="px-3 py-4 text-sm text-[var(--text-secondary)]">
                                                 {formatDate(invoice.created_at)}
                                             </td>
-
-                                            <td className="px-3 py-4 text-sm font-semibold text-slate-800">
+                                            <td className="px-3 py-4 text-sm font-semibold text-[var(--foreground)]">
                                                 {money(invoice.total_amount)}
                                             </td>
-
-                                            <td className="px-3 py-4 text-sm font-medium text-slate-700">
+                                            <td className="px-3 py-4 text-sm font-medium text-[var(--foreground)]">
                                                 {invoice.status === "cancelled"
                                                     ? "—"
                                                     : money(balance)}
                                             </td>
-
                                             <td className="px-3 py-4">
-                                                <span
-                                                    className={`rounded-full px-3 py-1 text-xs font-medium ${STATUS_STYLES[invoice.status] ||
-                                                        "bg-slate-100 text-slate-600"
-                                                        }`}
-                                                >
-                                                    {STATUS_LABELS[invoice.status] || invoice.status}
-                                                </span>
+                                                <StatusBadge status={invoice.status} />
                                             </td>
-
                                             <td className="px-3 py-4">
                                                 <div className="flex justify-end gap-3 text-sm">
                                                     <button
@@ -1198,7 +1264,7 @@ export default function BillingPanel() {
                                                             setShowPaymentForm(false);
                                                             setShowInvoiceForm(false);
                                                         }}
-                                                        className="font-medium text-blue-600 hover:text-blue-800"
+                                                        className="font-medium text-[var(--primary)] transition hover:opacity-75"
                                                     >
                                                         View
                                                     </button>
@@ -1208,7 +1274,7 @@ export default function BillingPanel() {
                                                         invoice.status !== "cancelled" && (
                                                             <button
                                                                 onClick={() => openPaymentForm(invoice)}
-                                                                className="font-medium text-teal-600 hover:text-teal-800"
+                                                                className="font-medium text-[var(--success)] transition hover:opacity-75"
                                                             >
                                                                 Pay
                                                             </button>
@@ -1219,7 +1285,7 @@ export default function BillingPanel() {
                                                         invoicePaid === 0 && (
                                                             <button
                                                                 onClick={() => cancelInvoice(invoice)}
-                                                                className="font-medium text-red-500 hover:text-red-700"
+                                                                className="font-medium text-[var(--danger)] transition hover:opacity-75"
                                                             >
                                                                 Cancel
                                                             </button>
@@ -1237,18 +1303,16 @@ export default function BillingPanel() {
 
             {/* Selected invoice details */}
             {selectedInvoice && (
-                <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-                    <div className="flex flex-col justify-between gap-5 border-b border-slate-100 pb-6 sm:flex-row sm:items-start">
+                <section className={`${cardClass} space-y-6`}>
+                    <div className="flex flex-col justify-between gap-4 border-b border-[var(--border)] pb-6 sm:flex-row sm:items-start">
                         <div>
-                            <p className="text-sm font-medium text-blue-600">
+                            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                                 Invoice details
                             </p>
-
-                            <h2 className="mt-1 text-2xl font-semibold text-slate-900">
+                            <h2 className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">
                                 {selectedInvoice.invoice_number}
                             </h2>
-
-                            <p className="mt-2 text-sm text-slate-500">
+                            <p className="mt-2 text-sm text-[var(--text-secondary)]">
                                 Created {formatDate(selectedInvoice.created_at)}
                             </p>
                         </div>
@@ -1256,7 +1320,7 @@ export default function BillingPanel() {
                         <div className="flex flex-wrap gap-2">
                             <button
                                 onClick={printInvoice}
-                                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                                className={secondaryButtonClass}
                             >
                                 Print invoice
                             </button>
@@ -1266,7 +1330,7 @@ export default function BillingPanel() {
                                 selectedInvoice.status !== "cancelled" && (
                                     <button
                                         onClick={() => openPaymentForm(selectedInvoice)}
-                                        className="rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-700"
+                                        className={primaryButtonClass}
                                     >
                                         + Record payment
                                     </button>
@@ -1274,38 +1338,35 @@ export default function BillingPanel() {
                         </div>
                     </div>
 
-                    <div className="grid gap-6 py-6 sm:grid-cols-2">
+                    {/* Patient and invoice information */}
+                    <div className="grid gap-6 sm:grid-cols-2">
                         <div>
-                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
                                 Billed to
                             </p>
-
-                            <p className="mt-2 font-semibold text-slate-800">
+                            <p className="mt-3 font-semibold text-[var(--foreground)]">
                                 {selectedPatient?.full_name || "Unknown patient"}
                             </p>
-
-                            <p className="mt-1 text-sm text-slate-500">
-                                {selectedPatient?.patient_code || ""}
-                            </p>
-
-                            <p className="mt-1 text-sm text-slate-500">
-                                {selectedPatient?.phone || ""}
-                            </p>
+                            {selectedPatient?.patient_code && (
+                                <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                                    {selectedPatient.patient_code}
+                                </p>
+                            )}
+                            {selectedPatient?.phone && (
+                                <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                                    {selectedPatient.phone}
+                                </p>
+                            )}
                         </div>
 
                         <div className="sm:text-right">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-muted)]">
                                 Invoice status
                             </p>
-
-                            <span
-                                className={`mt-2 inline-flex rounded-full px-3 py-1.5 text-xs font-semibold ${STATUS_STYLES[selectedInvoice.status]
-                                    }`}
-                            >
-                                {STATUS_LABELS[selectedInvoice.status]}
-                            </span>
-
-                            <p className="mt-3 text-sm text-slate-500">
+                            <div className="mt-3 sm:flex sm:justify-end">
+                                <StatusBadge status={selectedInvoice.status} />
+                            </div>
+                            <p className="mt-3 text-sm text-[var(--text-secondary)]">
                                 Linked appointment:{" "}
                                 {selectedInvoice.appointment_id
                                     ? formatDate(
@@ -1320,43 +1381,38 @@ export default function BillingPanel() {
                     </div>
 
                     {/* Invoice line items */}
-                    <div className="border-t border-slate-100 pt-5">
-                        <h3 className="font-semibold text-slate-900">
-                            Charges
-                        </h3>
+                    <div className="border-t border-[var(--border)] pt-6">
+                        <SectionHeading
+                            title="Charges"
+                            description="Services and items included in this invoice."
+                        />
 
                         <div className="mt-4 overflow-x-auto">
                             <table className="w-full min-w-[520px] text-left">
                                 <thead>
-                                    <tr className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-400">
-                                        <th className="py-3 font-medium">Description</th>
-                                        <th className="px-3 py-3 text-right font-medium">Qty</th>
-                                        <th className="px-3 py-3 text-right font-medium">
-                                            Unit price
-                                        </th>
-                                        <th className="py-3 text-right font-medium">Amount</th>
+                                    <tr className="border-b border-[var(--border)] text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">
+                                        <th className="py-3">Description</th>
+                                        <th className="px-3 py-3 text-right">Qty</th>
+                                        <th className="px-3 py-3 text-right">Unit price</th>
+                                        <th className="py-3 text-right">Amount</th>
                                     </tr>
                                 </thead>
-
                                 <tbody>
                                     {selectedItems.map((item) => (
                                         <tr
                                             key={item.id}
-                                            className="border-b border-slate-50 last:border-0"
+                                            className="border-b border-[var(--border)] last:border-0"
                                         >
-                                            <td className="py-4 text-sm font-medium text-slate-800">
+                                            <td className="py-4 text-sm font-medium text-[var(--foreground)]">
                                                 {item.description}
                                             </td>
-
-                                            <td className="px-3 py-4 text-right text-sm text-slate-600">
+                                            <td className="px-3 py-4 text-right text-sm text-[var(--text-secondary)]">
                                                 {Number(item.quantity).toLocaleString("en-IN")}
                                             </td>
-
-                                            <td className="px-3 py-4 text-right text-sm text-slate-600">
+                                            <td className="px-3 py-4 text-right text-sm text-[var(--text-secondary)]">
                                                 {money(item.unit_price)}
                                             </td>
-
-                                            <td className="py-4 text-right text-sm font-semibold text-slate-800">
+                                            <td className="py-4 text-right text-sm font-semibold text-[var(--foreground)]">
                                                 {money(item.line_total)}
                                             </td>
                                         </tr>
@@ -1366,7 +1422,7 @@ export default function BillingPanel() {
                                         <tr>
                                             <td
                                                 colSpan={4}
-                                                className="py-6 text-center text-sm text-slate-500"
+                                                className="py-7 text-center text-sm text-[var(--text-secondary)]"
                                             >
                                                 No line items are available for this invoice.
                                             </td>
@@ -1376,27 +1432,28 @@ export default function BillingPanel() {
                             </table>
                         </div>
 
-                        <div className="ml-auto mt-5 max-w-sm space-y-3 border-t border-slate-100 pt-5">
-                            <div className="flex justify-between text-sm text-slate-500">
-                                <span>Total billed</span>
-                                <span className="font-semibold text-slate-800">
+                        <div className="ml-auto mt-5 w-full max-w-sm space-y-3 border-t border-[var(--border)] pt-5">
+                            <div className="flex justify-between gap-4 text-sm">
+                                <span className="text-[var(--text-secondary)]">
+                                    Total billed
+                                </span>
+                                <span className="font-semibold text-[var(--foreground)]">
                                     {money(selectedInvoice.total_amount)}
                                 </span>
                             </div>
-
-                            <div className="flex justify-between text-sm text-slate-500">
-                                <span>Amount paid</span>
-                                <span className="font-semibold text-teal-700">
+                            <div className="flex justify-between gap-4 text-sm">
+                                <span className="text-[var(--text-secondary)]">
+                                    Amount paid
+                                </span>
+                                <span className="font-semibold text-[var(--success)]">
                                     {money(paidAmount)}
                                 </span>
                             </div>
-
-                            <div className="flex justify-between border-t border-slate-100 pt-3">
-                                <span className="font-semibold text-slate-800">
+                            <div className="flex justify-between gap-4 border-t border-[var(--border)] pt-3">
+                                <span className="font-semibold text-[var(--foreground)]">
                                     Outstanding
                                 </span>
-
-                                <span className="text-xl font-bold text-slate-900">
+                                <span className="text-xl font-semibold tracking-tight text-[var(--foreground)]">
                                     {money(
                                         selectedInvoice.status === "cancelled"
                                             ? 0
@@ -1408,40 +1465,33 @@ export default function BillingPanel() {
                     </div>
 
                     {/* Payment history */}
-                    <div className="mt-8 border-t border-slate-100 pt-6">
-                        <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
-                            <div>
-                                <h3 className="font-semibold text-slate-900">
-                                    Payment history
-                                </h3>
-                                <p className="mt-1 text-sm text-slate-500">
-                                    {selectedPayments.length} payment records
-                                </p>
-                            </div>
-                        </div>
+                    <div className="border-t border-[var(--border)] pt-6">
+                        <SectionHeading
+                            title="Payment history"
+                            description={`${selectedPayments.length} payment records`}
+                        />
 
                         {selectedPayments.length === 0 ? (
-                            <div className="mt-4 rounded-xl bg-slate-50 p-5 text-center text-sm text-slate-500">
+                            <div className="mt-4 rounded-[var(--control-radius)] bg-[var(--surface-subtle)] p-6 text-center text-sm text-[var(--text-secondary)]">
                                 No payments have been recorded for this invoice.
                             </div>
                         ) : (
-                            <div className="mt-4 space-y-3">
+                            <div className="mt-4 divide-y divide-[var(--border)]">
                                 {selectedPayments.map((payment) => (
                                     <div
                                         key={payment.id}
-                                        className="flex flex-col justify-between gap-3 rounded-xl border border-slate-100 p-4 sm:flex-row sm:items-center"
+                                        className="flex flex-col justify-between gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center"
                                     >
                                         <div>
-                                            <p className="font-semibold text-slate-800">
+                                            <p className="font-semibold text-[var(--foreground)]">
                                                 {money(payment.amount)}
                                             </p>
-
-                                            <p className="mt-1 text-xs text-slate-500">
+                                            <p className="mt-1 text-xs text-[var(--text-muted)]">
                                                 {formatDateTime(payment.paid_at)}
                                             </p>
                                         </div>
 
-                                        <span className="w-fit rounded-full bg-blue-50 px-3 py-1.5 text-xs font-medium capitalize text-blue-700">
+                                        <span className="w-fit rounded-full border border-[var(--border)] bg-[var(--surface-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)]">
                                             {PAYMENT_METHODS.find(
                                                 (method) =>
                                                     method.value === payment.payment_method
@@ -1456,7 +1506,7 @@ export default function BillingPanel() {
             )}
 
             {!loading && patients.length === 0 && (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-800">
+                <div className="rounded-[var(--control-radius)] border border-[var(--warning)] bg-[var(--warning-soft)] p-5 text-sm text-[var(--warning)]">
                     Register at least one patient before creating an invoice.
                 </div>
             )}

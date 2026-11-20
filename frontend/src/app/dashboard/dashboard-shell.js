@@ -1,6 +1,10 @@
 
 "use client";
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+
 import SettingsPanel from "./settings-panel";
 import StaffPanel from "./staff-panel";
 import AppointmentsPanel from "./appointments-panel";
@@ -8,9 +12,6 @@ import BillingPanel from "./billing-panel";
 import ReportsPanel from "./reports-panel";
 import DoctorsPanel from "./doctors-panel";
 import PatientsPanel from "./patients-panel";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 
 const THEME_KEY = "nova-clinic-theme";
 
@@ -32,6 +33,16 @@ const statColors = {
   amber: { background: "var(--warning-soft)", color: "var(--warning)" },
 };
 
+const cardStyle = {
+  background: "var(--surface)",
+  border: "1px solid var(--border)",
+  borderRadius: "var(--card-radius)",
+  boxShadow: "var(--shadow-card)",
+};
+
+const mutedText = { color: "var(--text-secondary)" };
+const subtleText = { color: "var(--text-muted)" };
+
 export default function DashboardShell({
   email,
   fullName,
@@ -52,7 +63,7 @@ export default function DashboardShell({
   const router = useRouter();
   const supabase = createClient();
 
-  // Load the saved theme when the dashboard opens.
+  // Restore saved theme.
   useEffect(() => {
     const savedTheme = localStorage.getItem(THEME_KEY);
     const initialTheme = savedTheme === "dark" ? "dark" : "light";
@@ -61,13 +72,28 @@ export default function DashboardShell({
     setTheme(initialTheme);
   }, []);
 
-  // Apply and remember theme changes.
+  // Persist theme changes.
   useEffect(() => {
     if (!theme) return;
 
     document.documentElement.dataset.theme = theme;
     localStorage.setItem(THEME_KEY, theme);
   }, [theme]);
+
+  // Close mobile navigation with Escape.
+  useEffect(() => {
+    if (!sidebarOpen) return;
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape") {
+        setSidebarOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [sidebarOpen]);
 
   function toggleTheme() {
     setTheme((current) => current === "dark" ? "light" : "dark");
@@ -127,38 +153,42 @@ export default function DashboardShell({
     router.refresh();
   }
 
-  const cardStyle = {
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    borderRadius: "var(--card-radius)",
-    boxShadow: "var(--shadow-card)",
-  };
+  function navigateTo(page) {
+    setActivePage(page);
+    setSidebarOpen(false);
+  }
 
-  const mutedText = { color: "var(--text-secondary)" };
-  const subtleText = { color: "var(--text-muted)" };
+  function changePreviewRole(persona) {
+    setPreviewRole(persona);
+    setActivePage("Overview");
+    setSidebarOpen(false);
+  }
 
   return (
     <div
-      className="min-h-screen"
+      className="min-h-screen overflow-x-clip"
       style={{
         background: "var(--background)",
         color: "var(--foreground)",
       }}
     >
-      {/* Mobile sidebar overlay */}
+      {/* Mobile navigation backdrop */}
       {sidebarOpen && (
         <button
+          type="button"
           aria-label="Close navigation"
           onClick={() => setSidebarOpen(false)}
-          className="fixed inset-0 z-40 bg-black/30 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/45 backdrop-blur-[2px] lg:hidden"
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 z-50 m-0 flex h-screen w-[264px] flex-col p-4 transition-transform duration-200 lg:translate-x-0 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        id="dashboard-navigation"
+        aria-label="Main navigation"
+        aria-hidden={!sidebarOpen && undefined}
+        className={`fixed inset-y-0 left-0 z-50 w-[min(86vw,300px)] p-3 transition-transform duration-300 ease-out lg:inset-y-3 lg:left-3 lg:w-[256px] lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
       >
         <div
           className="flex h-full flex-col overflow-hidden"
@@ -171,34 +201,49 @@ export default function DashboardShell({
         >
           {/* Brand */}
           <div
-            className="flex h-[72px] shrink-0 items-center gap-3 px-5"
+            className="flex h-[72px] shrink-0 items-center justify-between gap-3 px-5"
             style={{ borderBottom: "1px solid var(--border)" }}
           >
-            <div
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg font-bold"
-              style={{
-                background: "var(--primary)",
-                color: "var(--primary-foreground)",
-              }}
-            >
-              N
+            <div className="flex min-w-0 items-center gap-3">
+              <div
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg font-bold"
+                style={{
+                  background: "var(--primary)",
+                  color: "var(--primary-foreground)",
+                }}
+              >
+                N
+              </div>
+
+              <div className="min-w-0">
+                <h1 className="truncate text-[15px] font-semibold tracking-tight">
+                  {clinicName}
+                </h1>
+                <p
+                  className="mt-0.5 text-[10px] font-semibold tracking-[0.14em]"
+                  style={subtleText}
+                >
+                  MANAGEMENT OS
+                </p>
+              </div>
             </div>
 
-            <div className="min-w-0">
-              <h1 className="truncate text-[15px] font-semibold tracking-tight">
-                {clinicName}
-              </h1>
-              <p
-                className="mt-0.5 text-[10px] font-semibold tracking-[0.14em]"
-                style={subtleText}
-              >
-                MANAGEMENT OS
-              </p>
-            </div>
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(false)}
+              aria-label="Close navigation"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-lg lg:hidden"
+              style={{
+                background: "var(--surface-subtle)",
+                color: "var(--foreground)",
+              }}
+            >
+              ×
+            </button>
           </div>
 
           {/* Navigation */}
-          <div className="px-3 pt-7">
+          <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4 pt-6">
             <p
               className="mb-3 px-3 text-[10px] font-semibold tracking-[0.16em]"
               style={subtleText}
@@ -212,12 +257,11 @@ export default function DashboardShell({
 
                 return (
                   <button
+                    type="button"
                     key={item.name}
-                    onClick={() => {
-                      setActivePage(item.name);
-                      setSidebarOpen(false);
-                    }}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] font-medium transition-colors"
+                    onClick={() => navigateTo(item.name)}
+                    aria-current={active ? "page" : undefined}
+                    className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium transition-colors"
                     style={{
                       background: active
                         ? "var(--primary-soft)"
@@ -228,7 +272,7 @@ export default function DashboardShell({
                     }}
                   >
                     <span
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-base"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-base"
                       style={{
                         background: active
                           ? "var(--surface)"
@@ -242,20 +286,74 @@ export default function DashboardShell({
                     </span>
 
                     {item.name}
+
+                    {active && (
+                      <span
+                        className="ml-auto h-1.5 w-1.5 rounded-full"
+                        style={{ background: "var(--primary)" }}
+                      />
+                    )}
                   </button>
                 );
               })}
             </nav>
+
+            {/* Demo persona controls */}
+            {role === "demo" && (
+              <div className="mt-8">
+                <p
+                  className="mb-3 px-3 text-[10px] font-semibold tracking-[0.16em]"
+                  style={subtleText}
+                >
+                  PREVIEW ROLE
+                </p>
+
+                <div
+                  className="grid grid-cols-3 gap-1 rounded-xl p-1"
+                  style={{
+                    background: "var(--surface-subtle)",
+                    border: "1px solid var(--border)",
+                  }}
+                >
+                  {["admin", "receptionist", "doctor"].map((persona) => (
+                    <button
+                      type="button"
+                      key={persona}
+                      onClick={() => changePreviewRole(persona)}
+                      className="min-w-0 rounded-lg px-1 py-2.5 text-[10px] font-semibold capitalize transition-colors"
+                      style={{
+                        background:
+                          previewRole === persona
+                            ? "var(--surface)"
+                            : "transparent",
+                        color:
+                          previewRole === persona
+                            ? "var(--primary)"
+                            : "var(--text-secondary)",
+                        boxShadow:
+                          previewRole === persona
+                            ? "var(--shadow-card)"
+                            : "none",
+                      }}
+                    >
+                      {persona}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Sidebar bottom */}
-          <div className="mt-auto p-4">
-            
-
+          <div
+            className="shrink-0 p-3 sm:p-4"
+            style={{ borderTop: "1px solid var(--border)" }}
+          >
             <button
+              type="button"
               onClick={handleLogout}
               disabled={loggingOut}
-              className="mt-3 flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-[13px] font-medium transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+              className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-[13px] font-medium transition-colors hover:bg-[var(--danger-soft)] hover:text-[var(--danger)] disabled:opacity-50"
               style={mutedText}
             >
               <span className="text-lg">↪</span>
@@ -266,10 +364,10 @@ export default function DashboardShell({
       </aside>
 
       {/* Main area */}
-      <main className="min-h-screen lg:ml-[264px]">
+      <main className="min-h-screen lg:ml-[280px]">
         {/* Header */}
         <header
-          className="sticky top-0 z-30 flex h-[72px] items-center justify-between gap-3 px-5 sm:px-8"
+          className="sticky top-0 z-30 flex h-[68px] items-center justify-between gap-3 px-4 sm:h-[72px] sm:px-6 xl:px-8"
           style={{
             background: "var(--surface)",
             borderBottom: "1px solid var(--border)",
@@ -277,19 +375,22 @@ export default function DashboardShell({
         >
           <div className="flex min-w-0 items-center gap-3">
             <button
+              type="button"
               onClick={() => setSidebarOpen(true)}
-              className="rounded-lg px-3 py-2 text-lg lg:hidden"
+              aria-label="Open navigation"
+              aria-expanded={sidebarOpen}
+              aria-controls="dashboard-navigation"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg transition hover:bg-[var(--surface-hover)] lg:hidden"
               style={{
                 border: "1px solid var(--border)",
                 color: "var(--foreground)",
               }}
-              aria-label="Open navigation"
             >
               ☰
             </button>
 
             <div className="min-w-0">
-              <p className="truncate text-[15px] font-semibold">
+              <p className="truncate text-[14px] font-semibold sm:text-[15px]">
                 {activePage}
               </p>
               <p
@@ -301,47 +402,10 @@ export default function DashboardShell({
             </div>
           </div>
 
-          <div className="flex shrink-0 items-center gap-2 sm:gap-4">
-            {/* Demo persona selector */}
-            {role === "demo" && (
-              <div
-                className="hidden items-center gap-1 rounded-lg p-1 sm:flex"
-                style={{
-                  background: "var(--surface-subtle)",
-                  border: "1px solid var(--border)",
-                }}
-              >
-                {["admin", "receptionist", "doctor"].map((persona) => (
-                  <button
-                    key={persona}
-                    onClick={() => {
-                      setPreviewRole(persona);
-                      setActivePage("Overview");
-                    }}
-                    className="rounded-md px-2.5 py-2 text-[11px] font-semibold capitalize transition-colors sm:px-3"
-                    style={{
-                      background:
-                        previewRole === persona
-                          ? "var(--surface)"
-                          : "transparent",
-                      color:
-                        previewRole === persona
-                          ? "var(--primary)"
-                          : "var(--text-secondary)",
-                      boxShadow:
-                        previewRole === persona
-                          ? "var(--shadow-card)"
-                          : "none",
-                    }}
-                  >
-                    {persona}
-                  </button>
-                ))}
-              </div>
-            )}
-
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             {/* Theme toggle */}
             <button
+              type="button"
               onClick={toggleTheme}
               aria-label={
                 theme === "dark"
@@ -353,7 +417,7 @@ export default function DashboardShell({
                   ? "Switch to light theme"
                   : "Switch to dark theme"
               }
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-lg transition-colors"
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-lg transition hover:bg-[var(--surface-hover)]"
               style={{
                 background: "var(--surface-subtle)",
                 border: "1px solid var(--border)",
@@ -394,15 +458,15 @@ export default function DashboardShell({
         </header>
 
         {/* Page content */}
-        <div className="mx-auto max-w-[1500px] p-6 sm:p-10">
+        <div className="mx-auto w-full max-w-[1640px] p-4 sm:p-6 lg:p-8 2xl:px-10 2xl:py-9">
 
           {/* Overview */}
           {activePage === "Overview" ? (
-            <div className="space-y-9">
+            <div className="space-y-7 sm:space-y-9">
 
               {/* Welcome heading */}
               <section className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-                <div>
+                <div className="min-w-0">
                   <p
                     className="mb-2 text-xs font-semibold tracking-wide"
                     style={{ color: "var(--primary)" }}
@@ -410,12 +474,12 @@ export default function DashboardShell({
                     CLINIC OVERVIEW
                   </p>
 
-                  <h2 className="text-2xl font-semibold tracking-tight sm:text-[28px]">
+                  <h2 className="text-[23px] font-semibold tracking-tight sm:text-[28px]">
                     Good to see you, {fullName?.split(" ")[0] || "there"}.
                   </h2>
 
                   <p
-                    className="mt-2 text-sm"
+                    className="mt-2 text-sm leading-6"
                     style={mutedText}
                   >
                     Here's what's happening in your clinic today.
@@ -435,11 +499,13 @@ export default function DashboardShell({
                   >
                     TODAY
                   </p>
+
                   <p className="mt-1 text-sm font-semibold">
                     {new Date().toLocaleDateString("en-IN", {
                       weekday: "long",
                     })}
                   </p>
+
                   <p className="text-xs" style={mutedText}>
                     {new Date().toLocaleDateString("en-IN", {
                       day: "numeric",
@@ -449,7 +515,6 @@ export default function DashboardShell({
                   </p>
                 </div>
               </section>
-
 
               {/* Statistics */}
               <section>
@@ -462,14 +527,14 @@ export default function DashboardShell({
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 xl:gap-4 2xl:gap-5">
                   {stats.map((stat) => {
                     const colors = statColors[stat.color];
 
                     return (
                       <div
                         key={stat.title}
-                        className="min-w-0 p-6 sm:p-7"
+                        className="min-w-0 p-5 sm:p-6 xl:p-6 2xl:p-7"
                         style={cardStyle}
                       >
                         <div className="flex items-center justify-between gap-3">
@@ -492,14 +557,14 @@ export default function DashboardShell({
                         </div>
 
                         <h3
-                          className="mt-5 text-[30px] font-semibold tracking-tight"
+                          className="mt-5 break-words text-[27px] font-semibold tracking-tight sm:text-[30px]"
                           style={{ fontVariantNumeric: "tabular-nums" }}
                         >
                           {stat.value}
                         </h3>
 
                         <p
-                          className="mt-1 text-xs"
+                          className="mt-1 text-xs leading-5"
                           style={subtleText}
                         >
                           {stat.note}
@@ -511,15 +576,15 @@ export default function DashboardShell({
               </section>
 
               {/* Workspace sections */}
-              <section className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+              <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5 2xl:gap-6">
 
                 {/* Appointments shortcut */}
                 <div
-                  className="p-6 sm:p-7 xl:col-span-2"
+                  className="min-w-0 p-5 sm:p-7 xl:col-span-2"
                   style={cardStyle}
                 >
                   <div className="flex items-start justify-between gap-4">
-                    <div>
+                    <div className="min-w-0">
                       <p
                         className="text-xs font-semibold tracking-wide"
                         style={{ color: "var(--sage)" }}
@@ -554,8 +619,9 @@ export default function DashboardShell({
 
                   <div className="mt-7 flex flex-wrap gap-3">
                     <button
-                      onClick={() => setActivePage("Appointments")}
-                      className="rounded-lg px-5 py-2.5 text-xs font-semibold transition-opacity hover:opacity-90"
+                      type="button"
+                      onClick={() => navigateTo("Appointments")}
+                      className="min-h-11 rounded-xl px-5 py-3 text-xs font-semibold transition-opacity hover:opacity-90"
                       style={{
                         background: "var(--primary)",
                         color: "var(--primary-foreground)",
@@ -567,11 +633,12 @@ export default function DashboardShell({
                     </button>
 
                     <button
-                      onClick={() => setActivePage("Doctors")}
-                      className="rounded-lg px-5 py-2.5 text-xs font-semibold transition-colors"
+                      type="button"
+                      onClick={() => navigateTo("Doctors")}
+                      className="min-h-11 rounded-xl px-5 py-3 text-xs font-semibold transition-colors hover:bg-[var(--surface-hover)]"
                       style={{
                         background: "var(--surface)",
-                        border: "1px solid var(--border-strong)",
+                        border: "1px solid var(--border)",
                         color: "var(--foreground)",
                       }}
                     >
@@ -581,7 +648,7 @@ export default function DashboardShell({
                 </div>
 
                 {/* Workspace summary */}
-                <div className="p-6 sm:p-7" style={cardStyle}>
+                <div className="min-w-0 p-5 sm:p-7" style={cardStyle}>
                   <h3 className="text-[15px] font-semibold">
                     Your workspace
                   </h3>
@@ -622,7 +689,7 @@ export default function DashboardShell({
                         className="flex items-center gap-3"
                       >
                         <span
-                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-base"
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-base"
                           style={{
                             color: item.color,
                             background: item.background,
@@ -631,7 +698,7 @@ export default function DashboardShell({
                           {item.symbol}
                         </span>
 
-                        <div>
+                        <div className="min-w-0">
                           <p className="text-xs font-semibold">
                             {item.title}
                           </p>
@@ -686,7 +753,7 @@ export default function DashboardShell({
 
           ) : (
             <div
-              className="flex min-h-[420px] flex-col items-center justify-center p-8 text-center"
+              className="flex min-h-[360px] flex-col items-center justify-center p-8 text-center sm:min-h-[420px]"
               style={cardStyle}
             >
               <div
@@ -712,8 +779,9 @@ export default function DashboardShell({
               </p>
 
               <button
-                onClick={() => setActivePage("Overview")}
-                className="mt-6 rounded-lg px-5 py-2.5 text-xs font-semibold"
+                type="button"
+                onClick={() => navigateTo("Overview")}
+                className="mt-6 min-h-11 rounded-xl px-5 py-3 text-xs font-semibold"
                 style={{
                   background: "var(--primary)",
                   color: "var(--primary-foreground)",

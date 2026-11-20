@@ -23,7 +23,9 @@ function dateKey(date) {
 function exportCSV(rows) {
   const csv = rows
     .map((row) =>
-      row.map((value) => `"${String(value ?? "").replaceAll('"', '""')}"`).join(",")
+      row
+        .map((value) => `"${String(value ?? "").replaceAll('"', '""')}"`)
+        .join(",")
     )
     .join("\n");
 
@@ -36,6 +38,54 @@ function exportCSV(rows) {
   link.click();
 
   URL.revokeObjectURL(url);
+}
+
+const cardClass =
+  "rounded-[var(--card-radius)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-card)] sm:p-6";
+
+const sectionTitle =
+  "text-lg font-semibold tracking-tight text-[var(--foreground)]";
+
+const sectionDescription =
+  "mt-1 text-sm text-[var(--text-secondary)]";
+
+function StatCard({ label, value, note, accent }) {
+  const accentStyles = {
+    blue: "bg-[var(--primary-soft)] text-[var(--primary)]",
+    teal: "bg-[var(--teal)] text-[var(--foreground)]",
+    purple: "bg-[var(--lavender)] text-[var(--foreground)]",
+    amber: "bg-[var(--warning-soft)] text-[var(--warning)]",
+  };
+
+  return (
+    <div className={cardClass}>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm font-medium text-[var(--text-secondary)]">
+          {label}
+        </p>
+        <span
+          className={`h-2.5 w-2.5 shrink-0 rounded-full ${accentStyles[accent] || accentStyles.blue
+            }`}
+        />
+      </div>
+
+      <p className="mt-5 break-words text-2xl font-semibold tracking-tight text-[var(--foreground)] sm:text-[28px]">
+        {value}
+      </p>
+
+      <p className="mt-2 text-xs leading-5 text-[var(--text-muted)]">
+        {note}
+      </p>
+    </div>
+  );
+}
+
+function EmptyState({ message }) {
+  return (
+    <div className="flex min-h-32 items-center justify-center rounded-xl bg-[var(--surface-subtle)] px-5 text-center">
+      <p className="text-sm text-[var(--text-muted)]">{message}</p>
+    </div>
+  );
 }
 
 export default function ReportsPanel() {
@@ -193,7 +243,10 @@ export default function ReportsPanel() {
 
     const totalBilled = invoices
       .filter((item) => item.status !== "cancelled")
-      .reduce((sum, item) => sum + Number(item.total_amount || 0), 0);
+      .reduce(
+        (sum, item) => sum + Number(item.total_amount || 0),
+        0
+      );
 
     const totalCollected = payments.reduce(
       (sum, item) => sum + Number(item.amount || 0),
@@ -211,9 +264,13 @@ export default function ReportsPanel() {
 
     const outstanding = activeInvoices.reduce((sum, invoice) => {
       const paid = invoicePaid.get(invoice.id) || 0;
-      return sum + Math.max(
-        0,
-        Number(invoice.total_amount || 0) - paid
+
+      return (
+        sum +
+        Math.max(
+          0,
+          Number(invoice.total_amount || 0) - paid
+        )
       );
     }, 0);
 
@@ -223,19 +280,21 @@ export default function ReportsPanel() {
       return counts;
     }, {});
 
-    const doctorStats = data.doctors.map((doctor) => {
-      const doctorAppointments = appointments.filter(
-        (item) => item.doctor_id === doctor.id
-      );
+    const doctorStats = data.doctors
+      .map((doctor) => {
+        const doctorAppointments = appointments.filter(
+          (item) => item.doctor_id === doctor.id
+        );
 
-      return {
-        ...doctor,
-        total: doctorAppointments.length,
-        completed: doctorAppointments.filter(
-          (item) => item.status === "completed"
-        ).length,
-      };
-    }).sort((a, b) => b.total - a.total);
+        return {
+          ...doctor,
+          total: doctorAppointments.length,
+          completed: doctorAppointments.filter(
+            (item) => item.status === "completed"
+          ).length,
+        };
+      })
+      .sort((a, b) => b.total - a.total);
 
     const daily = [];
 
@@ -251,7 +310,8 @@ export default function ReportsPanel() {
           month: "short",
         }),
         appointments: appointments.filter(
-          (item) => dateKey(new Date(item.appointment_at)) === key
+          (item) =>
+            dateKey(new Date(item.appointment_at)) === key
         ).length,
       });
     }
@@ -273,21 +333,33 @@ export default function ReportsPanel() {
     ...report.daily.map((item) => item.appointments)
   );
 
+  const statusColors = [
+    "var(--primary)",
+    "var(--sage)",
+    "var(--lavender)",
+    "var(--amber)",
+    "var(--teal)",
+  ];
+
   if (loading) {
     return (
-      <div className="rounded-2xl border border-[#E1ECF8] bg-white p-10 text-center text-sm text-[#7890AC]">
-        Loading clinic reports...
+      <div className={`${cardClass} flex min-h-64 flex-col items-center justify-center`}>
+        <div className="h-7 w-7 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--primary)]" />
+        <p className="mt-4 text-sm text-[var(--text-secondary)]">
+          Loading clinic reports...
+        </p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
-        {error}
+      <div className="rounded-[var(--card-radius)] border border-[var(--danger)]/20 bg-[var(--danger-soft)] p-6">
+        <p className="text-sm text-[var(--danger)]">{error}</p>
         <button
+          type="button"
           onClick={loadReports}
-          className="ml-3 font-semibold underline"
+          className="mt-4 rounded-lg bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--surface-hover)]"
         >
           Retry
         </button>
@@ -297,27 +369,30 @@ export default function ReportsPanel() {
 
   return (
     <div className="space-y-7">
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+      {/* Page heading and actions */}
+      <div className="flex flex-col justify-between gap-5 xl:flex-row xl:items-end">
         <div>
-          <p className="text-sm font-medium text-blue-600">
+          <p className="text-sm font-medium text-[var(--primary)]">
             Clinic insights
           </p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-[#16345C]">
+          <h1 className="mt-1 text-[28px] font-semibold tracking-tight text-[var(--foreground)]">
             Reports
           </h1>
-          <p className="mt-2 text-sm text-[#7890AC]">
+          <p className="mt-2 text-sm text-[var(--text-secondary)]">
             Understand your clinic&apos;s activity and performance.
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {ranges.map((item) => (
             <button
+              type="button"
               key={item.value}
               onClick={() => setRange(item.value)}
-              className={`rounded-xl px-4 py-2.5 text-sm font-medium ${range === item.value
-                  ? "bg-blue-600 text-white"
-                  : "border border-[#E1ECF8] bg-white text-[#58718F]"
+              aria-pressed={range === item.value}
+              className={`rounded-xl px-4 py-2.5 text-sm font-medium transition ${range === item.value
+                ? "bg-[var(--primary)] text-[var(--primary-foreground)] shadow-sm"
+                : "border border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
                 }`}
             >
               {item.label}
@@ -325,211 +400,214 @@ export default function ReportsPanel() {
           ))}
 
           <button
-            onClick={() => exportCSV([
-              ["Report", "Value"],
-              ["New patients", report.patientCount],
-              ["Appointments", report.appointmentCount],
-              ["Billed in period", report.totalBilled],
-              ["Collected in period", report.totalCollected],
-              ["Current outstanding", report.outstanding],
-              [],
-              ["Appointment status", "Count"],
-              ...Object.entries(report.statusCounts),
-              [],
-              ["Doctor", "Specialization", "Appointments", "Completed"],
-              ...report.doctorStats.map((doctor) => [
-                doctor.full_name,
-                doctor.specialization,
-                doctor.total,
-                doctor.completed,
-              ]),
-            ])}
-            className="rounded-xl border border-[#E1ECF8] bg-white px-4 py-2.5 text-sm font-semibold text-[#58718F] hover:bg-[#F4F8FD]"
+            type="button"
+            onClick={() =>
+              exportCSV([
+                ["Report", "Value"],
+                ["New patients", report.patientCount],
+                ["Appointments", report.appointmentCount],
+                ["Billed in period", report.totalBilled],
+                ["Collected in period", report.totalCollected],
+                ["Current outstanding", report.outstanding],
+                [],
+                ["Appointment status", "Count"],
+                ...Object.entries(report.statusCounts),
+                [],
+                ["Doctor", "Specialization", "Appointments", "Completed"],
+                ...report.doctorStats.map((doctor) => [
+                  doctor.full_name,
+                  doctor.specialization,
+                  doctor.total,
+                  doctor.completed,
+                ]),
+              ])
+            }
+            className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--surface-hover)]"
           >
             Export CSV
           </button>
         </div>
       </div>
 
+      {/* Key metrics */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {[
-          {
-            label: "New patients",
-            value: report.patientCount.toLocaleString("en-IN"),
-            note: `Registered in ${range} days`,
-            color: "blue",
-          },
-          {
-            label: "Appointments",
-            value: report.appointmentCount.toLocaleString("en-IN"),
-            note: `Scheduled in ${range} days`,
-            color: "teal",
-          },
-          {
-            label: "Revenue collected",
-            value: money(report.totalCollected),
-            note: `Payments received in ${range} days`,
-            color: "purple",
-          },
-          {
-            label: "Outstanding balance",
-            value: money(report.outstanding),
-            note: "Across all active invoices",
-            color: "amber",
-          },
-        ].map((item) => (
-          <div
-            key={item.label}
-            className="rounded-2xl border border-[#E1ECF8] bg-white p-6"
-          >
-            <p className="text-sm font-medium text-[#7890AC]">
-              {item.label}
-            </p>
-            <p className="mt-5 break-words text-2xl font-bold tracking-tight text-[#16345C]">
-              {item.value}
-            </p>
-            <p className="mt-2 text-xs text-[#9AAEC4]">
-              {item.note}
-            </p>
-          </div>
-        ))}
+        <StatCard
+          label="New patients"
+          value={report.patientCount.toLocaleString("en-IN")}
+          note={`Registered in ${range} days`}
+          accent="blue"
+        />
+
+        <StatCard
+          label="Appointments"
+          value={report.appointmentCount.toLocaleString("en-IN")}
+          note={`Scheduled in ${range} days`}
+          accent="teal"
+        />
+
+        <StatCard
+          label="Revenue collected"
+          value={money(report.totalCollected)}
+          note={`Payments received in ${range} days`}
+          accent="purple"
+        />
+
+        <StatCard
+          label="Outstanding balance"
+          value={money(report.outstanding)}
+          note="Across all active invoices"
+          accent="amber"
+        />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <section className="rounded-2xl border border-[#E1ECF8] bg-white p-6">
-          <h2 className="text-lg font-semibold text-[#16345C]">
-            Appointment activity
-          </h2>
-          <p className="mt-1 text-sm text-[#8BA0B8]">
+      {/* Activity and status */}
+      <div className="grid gap-5 xl:grid-cols-2">
+        <section className={cardClass}>
+          <h2 className={sectionTitle}>Appointment activity</h2>
+          <p className={sectionDescription}>
             Daily appointments over the selected period.
           </p>
 
-          <div className="mt-7 flex h-48 items-end gap-1.5 overflow-x-auto">
-            {report.daily.map((item) => (
-              <div
-                key={item.date}
-                title={`${item.label}: ${item.appointments} appointments`}
-                className="flex h-full min-w-2 flex-1 flex-col justify-end"
-              >
-                <div
-                  className="w-full rounded-t-md bg-blue-500 transition-all"
-                  style={{
-                    height: `${(item.appointments / maxDaily) * 100}%`,
-                    minHeight: item.appointments ? "5px" : "0",
-                  }}
-                />
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-3 flex justify-between text-xs text-[#9AAEC4]">
-            <span>{report.daily[0]?.label}</span>
-            <span>{report.daily.at(-1)?.label}</span>
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-[#E1ECF8] bg-white p-6">
-          <h2 className="text-lg font-semibold text-[#16345C]">
-            Appointment status
-          </h2>
-          <p className="mt-1 text-sm text-[#8BA0B8]">
-            Breakdown for the selected period.
-          </p>
-
-          <div className="mt-6 space-y-5">
-            {Object.entries(report.statusCounts).length === 0 ? (
-              <p className="py-8 text-sm text-[#9AAEC4]">
-                No appointments in this period.
-              </p>
-            ) : (
-              Object.entries(report.statusCounts).map(([status, count]) => (
-                <div key={status}>
-                  <div className="mb-2 flex justify-between text-sm">
-                    <span className="capitalize text-[#58718F]">
-                      {status.replaceAll("_", " ")}
-                    </span>
-                    <span className="font-semibold text-[#16345C]">
-                      {count}
-                    </span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-[#EEF3F9]">
+          {report.appointmentCount === 0 ? (
+            <div className="mt-6">
+              <EmptyState message="No appointments in this period." />
+            </div>
+          ) : (
+            <>
+              <div className="mt-8 flex h-48 items-end gap-1.5 overflow-x-auto rounded-xl bg-[var(--surface-subtle)] px-3 pt-4">
+                {report.daily.map((item) => (
+                  <div
+                    key={item.date}
+                    title={`${item.label}: ${item.appointments} appointments`}
+                    className="flex h-full min-w-2 flex-1 flex-col justify-end"
+                  >
                     <div
-                      className="h-full rounded-full bg-blue-500"
+                      className="w-full rounded-t-md bg-[var(--primary)] transition-all duration-300"
                       style={{
-                        width: `${(count / report.appointmentCount) * 100}%`,
+                        height: `${(item.appointments / maxDaily) * 100}%`,
+                        minHeight: item.appointments ? "5px" : "0",
                       }}
                     />
                   </div>
-                </div>
-              ))
+                ))}
+              </div>
+
+              <div className="mt-3 flex justify-between text-xs text-[var(--text-muted)]">
+                <span>{report.daily[0]?.label}</span>
+                <span>{report.daily.at(-1)?.label}</span>
+              </div>
+            </>
+          )}
+        </section>
+
+        <section className={cardClass}>
+          <h2 className={sectionTitle}>Appointment status</h2>
+          <p className={sectionDescription}>
+            Breakdown for the selected period.
+          </p>
+
+          <div className="mt-7 space-y-5">
+            {Object.entries(report.statusCounts).length === 0 ? (
+              <EmptyState message="No appointments in this period." />
+            ) : (
+              Object.entries(report.statusCounts).map(
+                ([status, count], index) => (
+                  <div key={status}>
+                    <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+                      <span className="capitalize text-[var(--text-secondary)]">
+                        {status.replaceAll("_", " ")}
+                      </span>
+                      <span className="font-semibold tabular-nums text-[var(--foreground)]">
+                        {count}
+                      </span>
+                    </div>
+
+                    <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-subtle)]">
+                      <div
+                        className="h-full rounded-full transition-all duration-300"
+                        style={{
+                          width: `${(count / report.appointmentCount) * 100
+                            }%`,
+                          backgroundColor:
+                            statusColors[index % statusColors.length],
+                        }}
+                      />
+                    </div>
+                  </div>
+                )
+              )
             )}
           </div>
         </section>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <section className="rounded-2xl border border-[#E1ECF8] bg-white p-6">
-          <h2 className="text-lg font-semibold text-[#16345C]">
-            Financial summary
-          </h2>
-          <p className="mt-1 text-sm text-[#8BA0B8]">
+      {/* Financial and doctor reports */}
+      <div className="grid gap-5 xl:grid-cols-2">
+        <section className={cardClass}>
+          <h2 className={sectionTitle}>Financial summary</h2>
+          <p className={sectionDescription}>
             Billed and collected amounts for {range} days.
           </p>
 
-          <div className="mt-6 space-y-5">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-[#7890AC]">Total billed</span>
-              <strong className="text-[#16345C]">
+          <div className="mt-7 space-y-5">
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-sm text-[var(--text-secondary)]">
+                Total billed
+              </span>
+              <strong className="text-sm font-semibold tabular-nums text-[var(--foreground)]">
                 {money(report.totalBilled)}
               </strong>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-[#7890AC]">Payments collected</span>
-              <strong className="text-teal-700">
+
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-sm text-[var(--text-secondary)]">
+                Payments collected
+              </span>
+              <strong className="text-sm font-semibold tabular-nums text-[var(--success)]">
                 {money(report.totalCollected)}
               </strong>
             </div>
-            <div className="flex items-center justify-between border-t border-[#EAF0F8] pt-5">
-              <span className="text-sm text-[#7890AC]">Outstanding balance</span>
-              <strong className="text-amber-700">
+
+            <div className="flex items-center justify-between gap-4 border-t border-[var(--border)] pt-5">
+              <span className="text-sm text-[var(--text-secondary)]">
+                Outstanding balance
+              </span>
+              <strong className="text-sm font-semibold tabular-nums text-[var(--warning)]">
                 {money(report.outstanding)}
               </strong>
             </div>
           </div>
         </section>
 
-        <section className="rounded-2xl border border-[#E1ECF8] bg-white p-6">
-          <h2 className="text-lg font-semibold text-[#16345C]">
-            Doctor performance
-          </h2>
-          <p className="mt-1 text-sm text-[#8BA0B8]">
+        <section className={cardClass}>
+          <h2 className={sectionTitle}>Doctor performance</h2>
+          <p className={sectionDescription}>
             Appointment activity by doctor.
           </p>
 
-          <div className="mt-5 space-y-4">
+          <div className="mt-6 space-y-4">
             {report.doctorStats.length === 0 ? (
-              <p className="py-8 text-sm text-[#9AAEC4]">
-                No doctor records found.
-              </p>
+              <EmptyState message="No doctor records found." />
             ) : (
               report.doctorStats.map((doctor) => (
                 <div
                   key={doctor.id}
-                  className="flex items-center justify-between gap-4 border-b border-[#F0F4F9] pb-4 last:border-0"
+                  className="flex items-center justify-between gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface-subtle)] p-4 transition hover:bg-[var(--surface-hover)]"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-[#16345C]">
+                    <p className="truncate text-sm font-semibold text-[var(--foreground)]">
                       {doctor.full_name}
                     </p>
-                    <p className="mt-1 text-xs text-[#8BA0B8]">
+                    <p className="mt-1 text-xs text-[var(--text-muted)]">
                       {doctor.specialization || "General"}
                     </p>
                   </div>
+
                   <div className="shrink-0 text-right">
-                    <p className="text-sm font-semibold text-[#16345C]">
+                    <p className="text-sm font-semibold text-[var(--foreground)]">
                       {doctor.total} appointments
                     </p>
-                    <p className="mt-1 text-xs text-teal-600">
+                    <p className="mt-1 text-xs text-[var(--success)]">
                       {doctor.completed} completed
                     </p>
                   </div>

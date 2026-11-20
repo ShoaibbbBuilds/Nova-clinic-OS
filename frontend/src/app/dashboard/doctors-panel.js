@@ -673,11 +673,10 @@ export default function DoctorsPanel({ isReadOnly = false }) {
 
                     <td className="px-5 py-4">
                       <span
-                        className={`inline-flex rounded-md px-2.5 py-1 text-xs font-medium ${
-                          doctor.is_active
+                        className={`inline-flex rounded-md px-2.5 py-1 text-xs font-medium ${doctor.is_active
                             ? "bg-[var(--success-soft)] text-[var(--success)]"
                             : "bg-[var(--warning-soft)] text-[var(--warning)]"
-                        }`}
+                          }`}
                       >
                         {doctor.is_active ? "Active" : "Inactive"}
                       </span>

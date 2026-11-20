@@ -5,19 +5,60 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 const inputClass =
-    "mt-2 w-full rounded-xl border border-[#E1ECF8] bg-white px-4 py-3 text-sm text-[#16345C] outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100";
+    "mt-2 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition placeholder:text-[var(--text-muted)] focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary-soft)]";
 
-const labelClass = "text-sm font-medium text-[#58718F]";
+const labelClass =
+    "text-sm font-medium text-[var(--text-secondary)]";
 
 function Section({ title, description, children }) {
     return (
-        <section className="rounded-2xl border border-[#E1ECF8] bg-white p-6 sm:p-7">
+        <section className="rounded-[var(--card-radius)] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[var(--shadow-card)] sm:p-7">
             <div className="mb-6">
-                <h2 className="text-lg font-semibold text-[#16345C]">{title}</h2>
-                <p className="mt-1 text-sm text-[#8BA0B8]">{description}</p>
+                <h2 className="text-lg font-semibold tracking-tight text-[var(--foreground)]">
+                    {title}
+                </h2>
+                <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
+                    {description}
+                </p>
             </div>
             {children}
         </section>
+    );
+}
+
+function ReadOnlyField({ label, value }) {
+    return (
+        <div>
+            <p className={labelClass}>{label}</p>
+            <div className="mt-2 min-h-12 break-words rounded-xl border border-[var(--border)] bg-[var(--surface-subtle)] px-4 py-3 text-sm text-[var(--foreground)]">
+                {value || "Not provided"}
+            </div>
+        </div>
+    );
+}
+
+function Notice({ children, type = "success" }) {
+    const styles =
+        type === "error"
+            ? "border-[var(--danger)]/20 bg-[var(--danger-soft)] text-[var(--danger)]"
+            : "border-[var(--success)]/20 bg-[var(--success-soft)] text-[var(--success)]";
+
+    return (
+        <div className={`rounded-xl border px-4 py-3 text-sm ${styles}`}>
+            {children}
+        </div>
+    );
+}
+
+function PrimaryButton({ children, disabled, ...props }) {
+    return (
+        <button
+            {...props}
+            disabled={disabled}
+            className="rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-[var(--primary-foreground)] shadow-sm transition hover:bg-[var(--primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+            {children}
+        </button>
     );
 }
 
@@ -189,27 +230,31 @@ export default function SettingsPanel({
 
     if (loading) {
         return (
-            <div className="rounded-2xl border border-[#E1ECF8] bg-white p-10 text-center text-sm text-[#7890AC]">
-                Loading clinic settings...
+            <div className={`${"rounded-[var(--card-radius)] border border-[var(--border)] bg-[var(--surface)]"} flex min-h-64 flex-col items-center justify-center p-10`}>
+                <div className="h-7 w-7 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--primary)]" />
+                <p className="mt-4 text-sm text-[var(--text-secondary)]">
+                    Loading clinic settings...
+                </p>
             </div>
         );
     }
+
     if (isReadOnly) {
         return (
             <div className="space-y-7">
                 <div>
-                    <p className="text-sm font-medium text-blue-600">
+                    <p className="text-sm font-medium text-[var(--primary)]">
                         Clinic administration · Demo preview
                     </p>
-                    <h1 className="mt-1 text-3xl font-semibold tracking-tight text-[#16345C]">
+                    <h1 className="mt-1 text-[28px] font-semibold tracking-tight text-[var(--foreground)]">
                         Settings
                     </h1>
-                    <p className="mt-2 text-sm text-[#7890AC]">
+                    <p className="mt-2 text-sm text-[var(--text-secondary)]">
                         Explore the clinic settings interface. Changes are disabled in the public demo.
                     </p>
                 </div>
 
-                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                <div className="rounded-xl border border-[var(--warning)]/20 bg-[var(--warning-soft)] p-4 text-sm leading-6 text-[var(--foreground)]">
                     Read-only preview — clinic details, administrator profile and account security cannot be changed.
                 </div>
 
@@ -217,21 +262,14 @@ export default function SettingsPanel({
                     title="Clinic information"
                     description="Contact and business details associated with your clinic."
                 >
-                    <div className="space-y-4">
-                        {[
-                            ["Clinic name", clinic.name],
-                            ["Phone number", clinic.phone],
-                            ["Clinic email", clinic.email],
-                            ["Address", clinic.address],
-                            ["Website", clinic.website],
-                        ].map(([label, value]) => (
-                            <div key={label}>
-                                <p className={labelClass}>{label}</p>
-                                <div className="mt-2 rounded-xl border border-[#E1ECF8] bg-[#F4F8FD] px-4 py-3 text-sm text-[#16345C]">
-                                    {value || "Not provided"}
-                                </div>
-                            </div>
-                        ))}
+                    <div className="space-y-5">
+                        <ReadOnlyField label="Clinic name" value={clinic.name} />
+                        <div className="grid gap-5 sm:grid-cols-2">
+                            <ReadOnlyField label="Phone number" value={clinic.phone} />
+                            <ReadOnlyField label="Clinic email" value={clinic.email} />
+                        </div>
+                        <ReadOnlyField label="Address" value={clinic.address} />
+                        <ReadOnlyField label="Website" value={clinic.website} />
                     </div>
                 </Section>
 
@@ -239,19 +277,9 @@ export default function SettingsPanel({
                     title="Administrator profile"
                     description="Account details for the clinic administrator."
                 >
-                    <div className="space-y-4">
-                        <div>
-                            <p className={labelClass}>Display name</p>
-                            <div className="mt-2 rounded-xl border border-[#E1ECF8] bg-[#F4F8FD] px-4 py-3 text-sm text-[#16345C]">
-                                {adminName || "Not provided"}
-                            </div>
-                        </div>
-                        <div>
-                            <p className={labelClass}>Account email</p>
-                            <div className="mt-2 rounded-xl border border-[#E1ECF8] bg-[#F4F8FD] px-4 py-3 text-sm text-[#16345C]">
-                                {authEmail || "Not provided"}
-                            </div>
-                        </div>
+                    <div className="grid gap-5 sm:grid-cols-2">
+                        <ReadOnlyField label="Display name" value={adminName} />
+                        <ReadOnlyField label="Account email" value={authEmail} />
                     </div>
                 </Section>
 
@@ -259,9 +287,11 @@ export default function SettingsPanel({
                     title="Account security"
                     description="Password management for the administrator account."
                 >
-                    <p className="text-sm text-[#7890AC]">
-                        Password reset is unavailable in the public demo.
-                    </p>
+                    <div className="rounded-xl bg-[var(--surface-subtle)] p-4">
+                        <p className="text-sm text-[var(--text-secondary)]">
+                            Password reset is unavailable in the public demo.
+                        </p>
+                    </div>
                 </Section>
             </div>
         );
@@ -269,7 +299,7 @@ export default function SettingsPanel({
 
     if (error && !clinicId) {
         return (
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
+            <div className="rounded-[var(--card-radius)] border border-[var(--danger)]/20 bg-[var(--danger-soft)] p-6 text-sm text-[var(--danger)]">
                 {error}
             </div>
         );
@@ -277,30 +307,24 @@ export default function SettingsPanel({
 
     return (
         <div className="space-y-7">
+            {/* Page heading */}
             <div>
-                <p className="text-sm font-medium text-blue-600">
+                <p className="text-sm font-medium text-[var(--primary)]">
                     Clinic administration
                 </p>
-                <h1 className="mt-1 text-3xl font-semibold tracking-tight text-[#16345C]">
+                <h1 className="mt-1 text-[28px] font-semibold tracking-tight text-[var(--foreground)]">
                     Settings
                 </h1>
-                <p className="mt-2 text-sm text-[#7890AC]">
+                <p className="mt-2 text-sm text-[var(--text-secondary)]">
                     Manage your clinic information and administrator account.
                 </p>
             </div>
 
-            {message && (
-                <div className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-700">
-                    {message}
-                </div>
-            )}
+            {/* Feedback messages */}
+            {message && <Notice>{message}</Notice>}
+            {error && <Notice type="error">{error}</Notice>}
 
-            {error && (
-                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    {error}
-                </div>
-            )}
-
+            {/* Clinic information */}
             <Section
                 title="Clinic information"
                 description="Update the contact and business details associated with your clinic."
@@ -311,7 +335,9 @@ export default function SettingsPanel({
                         <input
                             required
                             value={clinic.name}
-                            onChange={(e) => updateClinicField("name", e.target.value)}
+                            onChange={(e) =>
+                                updateClinicField("name", e.target.value)
+                            }
                             className={inputClass}
                             placeholder="Enter clinic name"
                         />
@@ -323,7 +349,9 @@ export default function SettingsPanel({
                             <input
                                 type="tel"
                                 value={clinic.phone}
-                                onChange={(e) => updateClinicField("phone", e.target.value)}
+                                onChange={(e) =>
+                                    updateClinicField("phone", e.target.value)
+                                }
                                 className={inputClass}
                                 placeholder="Enter phone number"
                             />
@@ -334,7 +362,9 @@ export default function SettingsPanel({
                             <input
                                 type="email"
                                 value={clinic.email}
-                                onChange={(e) => updateClinicField("email", e.target.value)}
+                                onChange={(e) =>
+                                    updateClinicField("email", e.target.value)
+                                }
                                 className={inputClass}
                                 placeholder="clinic@example.com"
                             />
@@ -346,8 +376,10 @@ export default function SettingsPanel({
                         <textarea
                             rows={3}
                             value={clinic.address}
-                            onChange={(e) => updateClinicField("address", e.target.value)}
-                            className={inputClass}
+                            onChange={(e) =>
+                                updateClinicField("address", e.target.value)
+                            }
+                            className={`${inputClass} resize-y`}
                             placeholder="Enter clinic address"
                         />
                     </div>
@@ -357,24 +389,23 @@ export default function SettingsPanel({
                         <input
                             type="url"
                             value={clinic.website}
-                            onChange={(e) => updateClinicField("website", e.target.value)}
+                            onChange={(e) =>
+                                updateClinicField("website", e.target.value)
+                            }
                             className={inputClass}
                             placeholder="https://example.com"
                         />
                     </div>
 
-                    <div className="flex justify-end border-t border-[#EAF0F8] pt-5">
-                        <button
-                            type="submit"
-                            disabled={savingClinic}
-                            className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
-                        >
+                    <div className="flex justify-end border-t border-[var(--border)] pt-5">
+                        <PrimaryButton type="submit" disabled={savingClinic}>
                             {savingClinic ? "Saving..." : "Save clinic details"}
-                        </button>
+                        </PrimaryButton>
                     </div>
                 </form>
             </Section>
 
+            {/* Administrator profile */}
             <Section
                 title="Administrator profile"
                 description="Manage the personal details of your administrator account."
@@ -396,35 +427,35 @@ export default function SettingsPanel({
                         <input
                             value={authEmail}
                             readOnly
-                            className={`${inputClass} cursor-not-allowed bg-[#F4F8FD]`}
+                            className={`${inputClass} cursor-not-allowed bg-[var(--surface-subtle)]`}
                         />
-                        <p className="mt-2 text-xs text-[#9AAEC4]">
+                        <p className="mt-2 text-xs leading-5 text-[var(--text-muted)]">
                             This is your login email. It is separate from the clinic contact email.
                         </p>
                     </div>
 
-                    <div className="flex justify-end border-t border-[#EAF0F8] pt-5">
-                        <button
+                    <div className="flex justify-end border-t border-[var(--border)] pt-5">
+                        <PrimaryButton
                             type="submit"
                             disabled={savingProfile || !adminName.trim()}
-                            className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
                         >
                             {savingProfile ? "Saving..." : "Save profile"}
-                        </button>
+                        </PrimaryButton>
                     </div>
                 </form>
             </Section>
 
+            {/* Account security */}
             <Section
                 title="Account security"
                 description="Protect your administrator account by resetting your password."
             >
-                <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
                     <div>
-                        <p className="text-sm font-semibold text-[#16345C]">
+                        <p className="text-sm font-semibold text-[var(--foreground)]">
                             Reset password
                         </p>
-                        <p className="mt-1 text-sm text-[#8BA0B8]">
+                        <p className="mt-1 text-sm leading-6 text-[var(--text-secondary)]">
                             Receive a secure password reset link at your account email.
                         </p>
                     </div>
@@ -433,7 +464,7 @@ export default function SettingsPanel({
                         type="button"
                         onClick={sendPasswordReset}
                         disabled={sendingReset || !authEmail}
-                        className="shrink-0 rounded-xl border border-[#DCE8F5] bg-white px-5 py-3 text-sm font-semibold text-[#315B89] transition hover:bg-[#F4F8FD] disabled:opacity-60"
+                        className="shrink-0 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-5 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                         {sendingReset ? "Sending..." : "Send reset link"}
                     </button>

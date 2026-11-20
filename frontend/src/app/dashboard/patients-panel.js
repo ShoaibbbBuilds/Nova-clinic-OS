@@ -301,7 +301,7 @@ export default function PatientsPanel({
       if (deleteError) {
         throw new Error(
           "Unable to delete this patient. They may have linked records. Details: " +
-            deleteError.message
+          deleteError.message
         );
       }
 
