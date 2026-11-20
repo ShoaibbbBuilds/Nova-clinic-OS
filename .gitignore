@@ -23,3 +23,4 @@ Thumbs.db
 # Editor
 .vscode/*
 !.vscode/extensions.json
+frontend/src/app/globals.backup.css
