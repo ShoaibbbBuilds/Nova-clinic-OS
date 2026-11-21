@@ -301,45 +301,65 @@ export default function DashboardShell({
             {/* Demo persona controls */}
             {role === "demo" && (
               <div className="mt-8">
+
                 <p
-                  className="mb-3 px-3 text-[10px] font-semibold tracking-[0.16em]"
-                  style={subtleText}
+                  className="mb-3 text-[10px] font-semibold tracking-[0.16em]"
+                  style={{ color: "var(--text-muted)" }}
                 >
                   PREVIEW ROLE
                 </p>
 
                 <div
-                  className="grid grid-cols-3 gap-1 rounded-xl p-1"
+                  className="grid w-full grid-cols-3 gap-1 rounded-xl p-1"
                   style={{
                     background: "var(--surface-subtle)",
                     border: "1px solid var(--border)",
+                    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                    overflow: "hidden",
                   }}
                 >
-                  {["admin", "receptionist", "doctor"].map((persona) => (
+                  {[
+                    { value: "admin", label: "Admin" },
+                    { value: "receptionist", label: "Recep." },
+                    { value: "doctor", label: "Doctor" },
+                  ].map((persona) => (
                     <button
                       type="button"
-                      key={persona}
-                      onClick={() => changePreviewRole(persona)}
-                      className="min-w-0 rounded-lg px-1 py-2.5 text-[10px] font-semibold capitalize transition-colors"
+                      key={persona.value}
+                      title={persona.value === "receptionist" ? "Receptionist" : persona.label}
+                      aria-label={`Preview as ${persona.value}`}
+                      aria-pressed={previewRole === persona.value}
+                      onClick={() => changePreviewRole(persona.value)}
+                      className="flex min-w-0 w-full items-center justify-center rounded-lg py-2.5 font-semibold transition-colors"
                       style={{
+                        boxSizing: "border-box",
+                        paddingInline: "2px",
+                        fontSize: "10px",
+                        lineHeight: "1.2",
+                        letterSpacing: "-0.3px",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
                         background:
-                          previewRole === persona
+                          previewRole === persona.value
                             ? "var(--surface)"
                             : "transparent",
                         color:
-                          previewRole === persona
+                          previewRole === persona.value
                             ? "var(--primary)"
                             : "var(--text-secondary)",
                         boxShadow:
-                          previewRole === persona
+                          previewRole === persona.value
                             ? "var(--shadow-card)"
                             : "none",
                       }}
                     >
-                      {persona}
+                      {persona.label}
                     </button>
                   ))}
                 </div>
+
+
               </div>
             )}
           </div>
